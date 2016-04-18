@@ -1,0 +1,1425 @@
+{
+    "chainGroup": [
+        {
+            "name": "1-deoxyhexitol",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 11,
+                "ringnumber": null
+            },
+            "smiles": "CC(C(C(C(CO)O)O)O)O"
+        },
+        {
+            "name": "geranyloxy",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 11,
+                "ringnumber": null
+            },
+            "smiles": "CC(C)=CCCC(C)=CCO"
+        },
+        {
+            "name": "geranyl",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 10,
+                "ringnumber": null
+            },
+            "smiles": "CC(C)=CCCC(C)=CC"
+        },
+        {
+            "name": "lavandulyl",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 10,
+                "ringnumber": null
+            },
+            "smiles": "CC(C)=CCC(C)C(C)=C"
+        },
+        {
+            "name": "glutaric acid",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 9,
+                "ringnumber": null
+            },
+            "smiles": "C(CC(=O)O)CC(=O)O"
+        },
+        {
+            "name": "2,5-octadienyl",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 8,
+                "ringnumber": null
+            },
+            "smiles": "CC=CCC=CCC"
+        },
+        {
+            "name": "2,6-octadienyl",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 8,
+                "ringnumber": null
+            },
+            "smiles": "CC=CCCC=CC"
+        },
+        {
+            "name": "2,7-octadienyl",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 8,
+                "ringnumber": null
+            },
+            "smiles": "C=CCCCC=CC"
+        },
+        {
+            "name": "3,7-octadienyl",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 8,
+                "ringnumber": null
+            },
+            "smiles": "CCC=CCCC=C"
+        },
+        {
+            "name": "3-methyl-1-heptene",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 8,
+                "ringnumber": null
+            },
+            "smiles": "C=CC(C)CCCC"
+        },
+        {
+            "name": "succinic acid",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 8,
+                "ringnumber": null
+            },
+            "smiles": "OC(=O)CCC(O)=O"
+        },
+        {
+            "name": "4-hexenal",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 7,
+                "ringnumber": null
+            },
+            "smiles": "CC=CCCC=O"
+        },
+        {
+            "name": "angelic acid",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 7,
+                "ringnumber": null
+            },
+            "smiles": "CC(=CC)C(O)=O"
+        },
+        {
+            "name": "malonic acid",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 7,
+                "ringnumber": null
+            },
+            "smiles": "OC(=O)CC(=O)O"
+        },
+        {
+            "name": "pentanoic acid (valeric acid)",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 7,
+                "ringnumber": null
+            },
+            "smiles": "CCCCC(O)=O"
+        },
+        {
+            "name": "2-hexene",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 6,
+                "ringnumber": null
+            },
+            "smiles": "CCCC=CC"
+        },
+        {
+            "name": "2-methylbutyryl",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 6,
+                "ringnumber": null
+            },
+            "smiles": "CCC(C)C=O"
+        },
+        {
+            "name": "butanoic acid",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 6,
+                "ringnumber": null
+            },
+            "smiles": "CCCC(=O)O"
+        },
+        {
+            "name": "crotonic acid",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 6,
+                "ringnumber": null
+            },
+            "smiles": "CC=CC(O)=O"
+        },
+        {
+            "name": "oxalic acid",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 6,
+                "ringnumber": null
+            },
+            "smiles": "C(=O)(C(=O)O)O"
+        },
+        {
+            "name": "pentene",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 6,
+                "ringnumber": null
+            },
+            "smiles": "CCC=C(C)C"
+        },
+        {
+            "name": "tiglaldehyde",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 6,
+                "ringnumber": null
+            },
+            "smiles": "CC=C(C)C=O"
+        },
+        {
+            "name": "2-methylbutane",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 5,
+                "ringnumber": null
+            },
+            "smiles": "CC(C)CC"
+        },
+        {
+            "name": "2-propenoic acid",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 5,
+                "ringnumber": null
+            },
+            "smiles": "C=CC(=O)O"
+        },
+        {
+            "name": "butanal",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 5,
+                "ringnumber": null
+            },
+            "smiles": "CCCC=O"
+        },
+        {
+            "name": "dimethyl-2-propenyl",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 5,
+                "ringnumber": null
+            },
+            "smiles": "C=CC(C)C"
+        },
+        {
+            "name": "prenyl",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 5,
+                "ringnumber": null
+            },
+            "smiles": "CC=C(C)C"
+        },
+        {
+            "name": "sulfuric acid",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 5,
+                "ringnumber": null
+            },
+            "smiles": "OS(=O)(=O)O"
+        },
+        {
+            "name": "acetamide",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 4,
+                "ringnumber": null
+            },
+            "smiles": "CC(=O)N"
+        },
+        {
+            "name": "1,3-butadiene",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 4,
+                "ringnumber": null
+            },
+            "smiles": "C=CC=C"
+        },
+        {
+            "name": "acetate",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 4,
+                "ringnumber": null
+            },
+            "smiles": "CC(=O)O"
+        },
+        {
+            "name": "acetone",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 4,
+                "ringnumber": null
+            },
+            "smiles": "CC(C)=O"
+        },
+        {
+            "name": "allyl alcohol",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 4,
+                "ringnumber": null
+            },
+            "smiles": "C=CCO"
+        },
+        {
+            "name": "2-butenyl",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 4,
+                "ringnumber": null
+            },
+            "smiles": "CC=CC"
+        },
+        {
+            "name": "1-butenyl",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 4,
+                "ringnumber": null
+            },
+            "smiles": "CCC=C"
+        },
+        {
+            "name": "methyl formate",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 4,
+                "ringnumber": null
+            },
+            "smiles": "O=COC"
+        },
+        {
+            "name": "propionaldehyde",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 4,
+                "ringnumber": null
+            },
+            "smiles": "CCC=O"
+        },
+        {
+            "name": "acetaldehyde",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 3,
+                "ringnumber": null
+            },
+            "smiles": "CC=O"
+        },
+        {
+            "name": "dimethylamine",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 3,
+                "ringnumber": null
+            },
+            "smiles": "CNC"
+        },
+        {
+            "name": "ethanol",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 3,
+                "ringnumber": null
+            },
+            "smiles": "CCO"
+        },
+        {
+            "name": "formic acid",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 3,
+                "ringnumber": null
+            },
+            "smiles": "O=CO"
+        },
+        {
+            "name": "propane",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 3,
+                "ringnumber": null
+            },
+            "smiles": "CCC"
+        },
+        {
+            "name": "propene",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 3,
+                "ringnumber": null
+            },
+            "smiles": "CC=C"
+        },
+        {
+            "name": "hydrocyanic acid",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 2,
+                "ringnumber": null
+            },
+            "smiles": "C#N"
+        },
+        {
+            "name": "formaldehyde",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 2,
+                "ringnumber": null
+            },
+            "smiles": "C=O"
+        },
+        {
+            "name": "methanol",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 2,
+                "ringnumber": null
+            },
+            "smiles": "CO"
+        },
+        {
+            "name": "ethene",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 2,
+                "ringnumber": null
+            },
+            "smiles": "C=C"
+        },
+        {
+            "name": "ethane",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 2,
+                "ringnumber": null
+            },
+            "smiles": "CC"
+        },
+        {
+            "name": "hydroxy",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 1,
+                "ringnumber": null
+            },
+            "smiles": "O"
+        },
+        {
+            "name": "methyl",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 1,
+                "ringnumber": null
+            },
+            "smiles": "C"
+        },
+        {
+            "name": "amino",
+            "property": {
+                "checkaromatic": null,
+                "checkglc": null,
+                "haveBenzene": null,
+                "number": 1,
+                "ringnumber": null
+            },
+            "smiles": "N"
+        }
+    ],
+    "ringGroup": [
+        {
+            "name": "1,7-diphenylhex-5-en-3-ol",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": true,
+                "number": 20,
+                "ringnumber": 2
+            },
+            "smiles": "OC(CC=CCC1C=CC=CC=1)CCC1C=CC=CC=1"
+        },
+        {
+            "name": "dihydrophaseic acid",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 20,
+                "ringnumber": 3
+            },
+            "smiles": "CC(C=CC1(O)C2(C)CC(O)CC1(C)CO2)=CC(O)=O"
+        },
+        {
+            "name": "ferulic acid",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": true,
+                "number": 14,
+                "ringnumber": 1
+            },
+            "smiles": "COC1=CC(C=CC(O)=O)=CC=C1O"
+        },
+        {
+            "name": "2,3-dimethylbutylphenol",
+            "property": {
+                "checkaromatic": true,
+                "checkglc": false,
+                "haveBenzene": true,
+                "number": 13,
+                "ringnumber": 1
+            },
+            "smiles": "CC(C)C(C)CC1C=CC(O)=CC=1"
+        },
+        {
+            "name": "caffeic acid",
+            "property": {
+                "checkaromatic": true,
+                "checkglc": false,
+                "haveBenzene": true,
+                "number": 13,
+                "ringnumber": 1
+            },
+            "smiles": "OC(=O)C=CC1=CC(O)=C(O)C=C1"
+        },
+        {
+            "name": "glucuronide",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": true,
+                "haveBenzene": false,
+                "number": 13,
+                "ringnumber": 1
+            },
+            "smiles": "O=C(O)[C@H]1O[C@H](O)[C@H](O)[C@@H](O)[C@@H]1O"
+        },
+        {
+            "name": "glucuronide",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": true,
+                "haveBenzene": false,
+                "number": 13,
+                "ringnumber": 1
+            },
+            "smiles": "OC1OC(C(O)C(O)C1O)C(O)=O"
+        },
+        {
+            "name": "quinic acid",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 13,
+                "ringnumber": 1
+            },
+            "smiles": "OC1(CC(O)C(O)C(O)C1)C(=O)O"
+        },
+        {
+            "name": "1H-cyclopenta[c]pyridine, octahydro-2,4,7-trimethyl-",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 12,
+                "ringnumber": 2
+            },
+            "smiles": "CC1CCC2C1CN(CC2C)C"
+        },
+        {
+            "name": "alloside",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": true,
+                "haveBenzene": false,
+                "number": 12,
+                "ringnumber": 1
+            },
+            "smiles": "O[C@H]1[C@H](O)C(CO)O[C@@H](O)C1O"
+        },
+        {
+            "name": "alloside",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": true,
+                "haveBenzene": false,
+                "number": 12,
+                "ringnumber": 1
+            },
+            "smiles": "OCC1OC(O)C(O)C(O)C1O"
+        },
+        {
+            "name": "galactoside (alpha-D)",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": true,
+                "haveBenzene": false,
+                "number": 12,
+                "ringnumber": 1
+            },
+            "smiles": "O[C@H]1[C@@H](O)[C@@H](CO)O[C@H](O)[C@@H]1O"
+        },
+        {
+            "name": "galactoside (beta-D)",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": true,
+                "haveBenzene": false,
+                "number": 12,
+                "ringnumber": 1
+            },
+            "smiles": "O[C@H]1[C@@H](O)[C@@H](CO)O[C@@H](O)[C@@H]1O"
+        },
+        {
+            "name": "galactoside or glucoside",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": true,
+                "haveBenzene": false,
+                "number": 12,
+                "ringnumber": 1
+            },
+            "smiles": "OCC1OC(O)C(O)C(O)C1O"
+        },
+        {
+            "name": "gallic acid",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": true,
+                "number": 12,
+                "ringnumber": 1
+            },
+            "smiles": "OC1C=C(C=C(O)C=1O)C(O)=O"
+        },
+        {
+            "name": "glucoside (alpha-D)",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": true,
+                "haveBenzene": false,
+                "number": 12,
+                "ringnumber": 1
+            },
+            "smiles": "O[C@H]1[C@H](O)[C@@H](CO)O[C@H](O)[C@@H]1O"
+        },
+        {
+            "name": "glucoside (beta-D)",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": true,
+                "haveBenzene": false,
+                "number": 12,
+                "ringnumber": 1
+            },
+            "smiles": "O[C@H]1[C@H](O)[C@@H](CO)O[C@@H](O)[C@@H]1O"
+        },
+        {
+            "name": "vanillic acid",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": true,
+                "number": 12,
+                "ringnumber": 1
+            },
+            "smiles": "COC1=CC(=CC=C1O)C(O)=O"
+        },
+        {
+            "name": "p-Coumaric acid",
+            "property": {
+                "checkaromatic": true,
+                "checkglc": false,
+                "haveBenzene": true,
+                "number": 12,
+                "ringnumber": 1
+            },
+            "smiles": "OC1C=CC(=CC=1)C=CC(O)=O"
+        },
+        {
+            "name": "1-hydroxy-6-oxo-2-cyclohexene-1-carboxylate",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 11,
+                "ringnumber": 1
+            },
+            "smiles": "OC(=O)C1(O)C=CCCC1=O"
+        },
+        {
+            "name": "cinnamic acid",
+            "property": {
+                "checkaromatic": true,
+                "checkglc": false,
+                "haveBenzene": true,
+                "number": 11,
+                "ringnumber": 1
+            },
+            "smiles": "OC(=O)C=CC1C=CC=CC=1"
+        },
+        {
+            "name": "rhamnoside",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": true,
+                "haveBenzene": false,
+                "number": 11,
+                "ringnumber": 1
+            },
+            "smiles": "OC1[C@@H](O)C(C)O[C@@H](O)C1O"
+        },
+        {
+            "name": "rhamnoside",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": true,
+                "haveBenzene": false,
+                "number": 11,
+                "ringnumber": 1
+            },
+            "smiles": "CC1OC(O)C(O)C(O)C1O"
+        },
+        {
+            "name": "3-oxocyclohexene-1-carboxylic acid",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 10,
+                "ringnumber": 1
+            },
+            "smiles": "OC(=O)C=1CCCC(=O)C=1"
+        },
+        {
+            "name": "apioside",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": true,
+                "haveBenzene": false,
+                "number": 10,
+                "ringnumber": 1
+            },
+            "smiles": "O[C@]1(CO)CO[C@@H](O)[C@@H]1O"
+        },
+        {
+            "name": "apioside",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": true,
+                "haveBenzene": false,
+                "number": 10,
+                "ringnumber": 1
+            },
+            "smiles": "OCC1(O)COC(O)C1O"
+        },
+        {
+            "name": "arabinofuranoside",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": true,
+                "haveBenzene": false,
+                "number": 10,
+                "ringnumber": 1
+            },
+            "smiles": "O[C@@H]1[C@@H](O)[C@H](O)O[C@H]1CO"
+        },
+        {
+            "name": "arabinofuranoside",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": true,
+                "haveBenzene": false,
+                "number": 10,
+                "ringnumber": 1
+            },
+            "smiles": "OCC1OC(O)C(O)C1O"
+        },
+        {
+            "name": "cinnamyl alcohol",
+            "property": {
+                "checkaromatic": true,
+                "checkglc": false,
+                "haveBenzene": true,
+                "number": 10,
+                "ringnumber": 1
+            },
+            "smiles": "OCC=CC1C=CC=CC=1"
+        },
+        {
+            "name": "D-xyloside",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": true,
+                "haveBenzene": false,
+                "number": 10,
+                "ringnumber": 1
+            },
+            "smiles": "C1[C@H]([C@@H]([C@H](C(O1)O)O)O)O"
+        },
+        {
+            "name": "hydroxystyryl",
+            "property": {
+                "checkaromatic": true,
+                "checkglc": false,
+                "haveBenzene": true,
+                "number": 10,
+                "ringnumber": 1
+            },
+            "smiles": "CC=CC1C=CC(O)=CC=1"
+        },
+        {
+            "name": "xylopyranoside",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": true,
+                "haveBenzene": false,
+                "number": 10,
+                "ringnumber": 1
+            },
+            "smiles": "O[C@H]1[C@H](O)COC(O)[C@@H]1O"
+        },
+        {
+            "name": "xylopyranoside or D-xyloside",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": true,
+                "haveBenzene": false,
+                "number": 10,
+                "ringnumber": 1
+            },
+            "smiles": "OC1COC(O)C(O)C1O"
+        },
+        {
+            "name": "p-hydroxybenzoic acid",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": true,
+                "number": 10,
+                "ringnumber": 1
+            },
+            "smiles": "OC1C=CC(=CC=1)C(O)=O"
+        },
+        {
+            "name": "2,2-dimethyl-3,4-dihydro-pyran-3-ol",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 9,
+                "ringnumber": 1
+            },
+            "smiles": "OC1CC=COC1(C)C"
+        },
+        {
+            "name": "2,8-dioxabicyclo[3.3.1]nona-3,6-diene",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 9,
+                "ringnumber": 3
+            },
+            "smiles": "C1=COC2CC1C=CO2"
+        },
+        {
+            "name": "2-cyclohexene-1-carboxylic acid",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 9,
+                "ringnumber": 1
+            },
+            "smiles": "O=C(O)C1C=CCCC1"
+        },
+        {
+            "name": "4-oxocyclopent-2-ene-1-carboxylic acid",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 9,
+                "ringnumber": 1
+            },
+            "smiles": "O=C(O)C1C=CC(=O)C1"
+        },
+		{
+            "name": "arabinoside",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": true,
+                "haveBenzene": false,
+                "number": 9,
+                "ringnumber": 1
+            },
+            "smiles": "C1[C@@H]([C@@H]([C@H](C(O1)O)O)O)O"
+        },
+        {
+            "name": "arabinoside",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": true,
+                "haveBenzene": false,
+                "number": 9,
+                "ringnumber": 1
+            },
+            "smiles": "OC1C(O)COCC1O"
+        },
+        {
+            "name": "benzoic acid",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": true,
+                "number": 9,
+                "ringnumber": 1
+            },
+            "smiles": "OC(=O)C1C=CC=CC=1"
+        },
+        {
+            "name": "2,2-dimethylpyran",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 8,
+                "ringnumber": 1
+            },
+            "smiles": "CC1(C)C=CC=CO1"
+        },
+        {
+            "name": "2,3,5,6-tetrahydro-1,4-dioxocine",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 8,
+                "ringnumber": 1
+            },
+            "smiles": "C1CC=COCCO1"
+        },
+        {
+            "name": "3-methylpyran-2-one",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 8,
+                "ringnumber": 1
+            },
+            "smiles": "CC1=CC=COC1=O"
+        },
+        {
+            "name": "dimethyl-pyrano",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 8,
+                "ringnumber": 1
+            },
+            "smiles": "CC1(C)CC=CCO1"
+        },
+        {
+            "name": "phenylethylene",
+            "property": {
+                "checkaromatic": true,
+                "checkglc": false,
+                "haveBenzene": true,
+                "number": 8,
+                "ringnumber": 1
+            },
+            "smiles": "C=CC1=CC=CC=C1"
+        },
+        {
+            "name": "2,5-dihydrooxepine",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 7,
+                "ringnumber": 1
+            },
+            "smiles": "C1=CCC=CCO1"
+        },
+        {
+            "name": "4-oxo-4H-pyranyl",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 7,
+                "ringnumber": 1
+            },
+            "smiles": "O=C1C=COC=C1"
+        },
+        {
+            "name": "cyclohexenone",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 7,
+                "ringnumber": 1
+            },
+            "smiles": "O=C1C=CCCC1"
+        },
+        {
+            "name": "dihydropyranone",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 7,
+                "ringnumber": 1
+            },
+            "smiles": "O=C1CCC=CO1"
+        },
+        {
+            "name": "phenol",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": true,
+                "number": 7,
+                "ringnumber": 1
+            },
+            "smiles": "OC1C=CC=CC=1"
+        },
+        {
+            "name": "phenylmethane",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": true,
+                "number": 7,
+                "ringnumber": 1
+            },
+            "smiles": "CC1C=CC=CC=1"
+        },
+        {
+            "name": "pyran-2-one",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 7,
+                "ringnumber": 1
+            },
+            "smiles": "O1C=CC=CC1=O"
+        },
+        {
+            "name": "1,4-cyclohexanediene",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 6,
+                "ringnumber": 1
+            },
+            "smiles": "C1C=CCC=C1"
+        },
+        {
+            "name": "1,4-dioxene",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 6,
+                "ringnumber": 1
+            },
+            "smiles": "C1=COCCO1"
+        },
+        {
+            "name": "1,4-dioxane",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 6,
+                "ringnumber": 1
+            },
+            "smiles": "C1COCCO1"
+        },
+        {
+            "name": "2-pyrrolidinone",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 6,
+                "ringnumber": 1
+            },
+            "smiles": "O=C1CCCN1"
+        },
+        {
+            "name": "2H-pyran",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 6,
+                "ringnumber": 1
+            },
+            "smiles": "C1=CC=CCO1"
+        },
+        {
+            "name": "3-methyl-2,3-epoxybutoxy",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 6,
+                "ringnumber": 1
+            },
+            "smiles": "CC1(C)OC1C"
+        },
+        {
+            "name": "benzene",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": true,
+                "number": 6,
+                "ringnumber": 1
+            },
+            "smiles": "C1=CC=CC=C1"
+        },
+        {
+            "name": "benzene",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": true,
+                "number": 6,
+                "ringnumber": 1
+            },
+            "smiles": "c1ccccc1"
+        },
+        {
+            "name": "cyclohexadiene",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 6,
+                "ringnumber": 1
+            },
+            "smiles": "C1CC=CC=C1"
+        },
+        {
+            "name": "cyclohexane",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 6,
+                "ringnumber": 1
+            },
+            "smiles": "C1CCCCC1"
+        },
+        {
+            "name": "cyclohexene",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 6,
+                "ringnumber": 1
+            },
+            "smiles": "C1C=CCCC1"
+        },
+        {
+            "name": "cyclopentenone",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 6,
+                "ringnumber": 1
+            },
+            "smiles": "O=C1C=CCC1"
+        },
+        {
+            "name": "dihydropyran",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 6,
+                "ringnumber": 1
+            },
+            "smiles": "C1=CCCCO1"
+        },
+        {
+            "name": "furan-3-one",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 6,
+                "ringnumber": 1
+            },
+            "smiles": "O=C1C=COC1"
+        },
+        {
+            "name": "piperazine",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 6,
+                "ringnumber": 1
+            },
+            "smiles": "C1CNCCN1"
+        },
+        {
+            "name": "pyran",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 6,
+                "ringnumber": 1
+            },
+            "smiles": "O1C=CCC=C1"
+        },
+        {
+            "name": "pyridin",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 6,
+                "ringnumber": 1
+            },
+            "smiles": "C1=CC=CN=C1"
+        },
+        {
+            "name": "tetrahydropyran",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 6,
+                "ringnumber": 1
+            },
+            "smiles": "C1CCCCO1"
+        },
+        {
+            "name": "1,3-dioxole",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 5,
+                "ringnumber": 1
+            },
+            "smiles": "C1=COCO1"
+        },
+        {
+            "name": "2,3-dihydrofuran",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 5,
+                "ringnumber": 1
+            },
+            "smiles": "O1C=CCC1"
+        },
+        {
+            "name": "2,5-dihydrofuran",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 5,
+                "ringnumber": 1
+            },
+            "smiles": "C1C=CCO1"
+        },
+        {
+            "name": "furano",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 5,
+                "ringnumber": 1
+            },
+            "smiles": "C1=CC=CO1"
+        },
+        {
+            "name": "tetrahydrofuran",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 5,
+                "ringnumber": 1
+            },
+            "smiles": "C1CCCO1"
+        },
+        {
+            "name": "cyclopropane",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 3,
+                "ringnumber": 1
+            },
+            "smiles": "C1CC1"
+        },
+        {
+            "name": "oxirane",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 3,
+                "ringnumber": 1
+            },
+            "smiles": "C1CO1"
+        }
+    ]
+}
