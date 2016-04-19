@@ -36,4 +36,10 @@ Python 2.7
 
 #**Contact**
 Nai-ping Dong
+
 np.dong572@gmail.com
+
+#**References**
+[1] Rauter AP. [Nomenclature of Flavonoids (IUPAC Provisional Recommendations)](http://iupac.org/recommendation/nomenclature-of-flavonoids/).
+[2] Harborne JB, Baxter H. The Handbook of Natural Flavonoids (2 Volume Set). Wiley, 1999.
+[3] Buckingham J, Munasinghe VRN. Dictionary of Flavonoids. CRC Press, 2015.
