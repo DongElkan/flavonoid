@@ -29,7 +29,7 @@ Thus all groups can be found in *path*. If *path* is empty, the groups can be fo
 In addition, basic properties such as molecular weight, exact molecular weight, formula can also be obtained, and the image can be generated.
 
 #**Classes of flavonoids**
-The classes of flavonoids are summarized in *flavonoids_skeleton.pdf* provided current package. The name of each class is collected from [2], [3] and references in the ..pdf file. If the input molecular identifier is not matched with the skeleton of defined class, `None` will be output. Therefore, some special flavonoids like *Mbamichalcone* can not be identified.
+The classes of flavonoids are summarized in **flavonoids_skeleton.pdf** provided current package. The name of each class is collected from [2], [3] and references in the ..pdf file. If the input molecular identifier is not matched with the skeleton of defined class, `None` will be output. Therefore, some special flavonoids like *Mbamichalcone* can not be identified.
 
 #**Prerequisites**
 Python 2.7
@@ -41,5 +41,7 @@ np.dong572@gmail.com
 
 #**References**
 [1] Rauter AP. [Nomenclature of Flavonoids (IUPAC Provisional Recommendations)](http://iupac.org/recommendation/nomenclature-of-flavonoids/).
+
 [2] Harborne JB, Baxter H. The Handbook of Natural Flavonoids (2 Volume Set). Wiley, 1999.
+
 [3] Buckingham J, Munasinghe VRN. Dictionary of Flavonoids. CRC Press, 2015.
