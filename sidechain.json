@@ -751,17 +751,6 @@
             "smiles": "O[C@H]1[C@H](O)[C@@H](CO)O[C@@H](O)[C@@H]1O"
         },
         {
-            "name": "vanillic acid",
-            "property": {
-                "checkaromatic": false,
-                "checkglc": false,
-                "haveBenzene": true,
-                "number": 12,
-                "ringnumber": 1
-            },
-            "smiles": "COC1=CC(=CC=C1O)C(O)=O"
-        },
-        {
             "name": "p-Coumaric acid",
             "property": {
                 "checkaromatic": true,
@@ -771,6 +760,17 @@
                 "ringnumber": 1
             },
             "smiles": "OC1C=CC(=CC=1)C=CC(O)=O"
+        },
+        {
+            "name": "vanillic acid",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": true,
+                "number": 12,
+                "ringnumber": 1
+            },
+            "smiles": "COC1=CC(=CC=C1O)C(O)=O"
         },
         {
             "name": "1-hydroxy-6-oxo-2-cyclohexene-1-carboxylate",
@@ -828,6 +828,17 @@
             "smiles": "OC(=O)C=1CCCC(=O)C=1"
         },
         {
+            "name": "D-xyloside",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": true,
+                "haveBenzene": false,
+                "number": 10,
+                "ringnumber": 1
+            },
+            "smiles": "C1[C@H]([C@@H]([C@H](C(O1)O)O)O)O"
+        },
+        {
             "name": "apioside",
             "property": {
                 "checkaromatic": false,
@@ -883,17 +894,6 @@
             "smiles": "OCC=CC1C=CC=CC=1"
         },
         {
-            "name": "D-xyloside",
-            "property": {
-                "checkaromatic": false,
-                "checkglc": true,
-                "haveBenzene": false,
-                "number": 10,
-                "ringnumber": 1
-            },
-            "smiles": "C1[C@H]([C@@H]([C@H](C(O1)O)O)O)O"
-        },
-        {
             "name": "hydroxystyryl",
             "property": {
                 "checkaromatic": true,
@@ -903,6 +903,17 @@
                 "ringnumber": 1
             },
             "smiles": "CC=CC1C=CC(O)=CC=1"
+        },
+        {
+            "name": "p-hydroxybenzoic acid",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": true,
+                "number": 10,
+                "ringnumber": 1
+            },
+            "smiles": "OC1C=CC(=CC=1)C(O)=O"
         },
         {
             "name": "xylopyranoside",
@@ -925,17 +936,6 @@
                 "ringnumber": 1
             },
             "smiles": "OC1COC(O)C(O)C1O"
-        },
-        {
-            "name": "p-hydroxybenzoic acid",
-            "property": {
-                "checkaromatic": false,
-                "checkglc": false,
-                "haveBenzene": true,
-                "number": 10,
-                "ringnumber": 1
-            },
-            "smiles": "OC1C=CC(=CC=1)C(O)=O"
         },
         {
             "name": "2,2-dimethyl-3,4-dihydro-pyran-3-ol",
@@ -981,7 +981,7 @@
             },
             "smiles": "O=C(O)C1C=CC(=O)C1"
         },
-		{
+        {
             "name": "arabinoside",
             "property": {
                 "checkaromatic": false,
@@ -1158,17 +1158,6 @@
             "smiles": "C1C=CCC=C1"
         },
         {
-            "name": "1,4-dioxene",
-            "property": {
-                "checkaromatic": false,
-                "checkglc": false,
-                "haveBenzene": false,
-                "number": 6,
-                "ringnumber": 1
-            },
-            "smiles": "C1=COCCO1"
-        },
-        {
             "name": "1,4-dioxane",
             "property": {
                 "checkaromatic": false,
@@ -1178,6 +1167,17 @@
                 "ringnumber": 1
             },
             "smiles": "C1COCCO1"
+        },
+        {
+            "name": "1,4-dioxene",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 6,
+                "ringnumber": 1
+            },
+            "smiles": "C1=COCCO1"
         },
         {
             "name": "2-pyrrolidinone",
@@ -1398,6 +1398,17 @@
                 "ringnumber": 1
             },
             "smiles": "C1CCCO1"
+        },
+        {
+            "name": "Cyclobutan",
+            "property": {
+                "checkaromatic": false,
+                "checkglc": false,
+                "haveBenzene": false,
+                "number": 4,
+                "ringnumber": 1
+            },
+            "smiles": "C1CCC1"
         },
         {
             "name": "cyclopropane",

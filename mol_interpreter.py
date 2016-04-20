@@ -180,6 +180,18 @@ def numrgass(assrings, idx):
     return len(set([i for i in t if i in idx]))
 
 
+def getskidx(ringidx, sk):
+    """ get the indices of identified skeletons """
+    skix = []
+    for ski in sk:
+        tix = []
+        for i in ski[0]:
+            tix += ringidx[i]
+        tix += ski[1:-1]
+        skix.append(tix)
+    return skix
+
+
 def atominfo(mol):
     """
     Get information of atoms and corresponding neighbor atoms in current
@@ -1215,11 +1227,11 @@ def getSkeleton(mol):
     atominfo(mol)
     fatom, fneis = atoms, neis
     
-    sk, names =[], []
+    sk, skix, names =[], [], []
     
     ringidx, benzeneidx, brid = getRings(mol)
     if not ringidx or not benzeneidx:
-        return None, None, None
+        return None, None, None, None
 
     n, nr = len(benzeneidx), len(ringidx)
 
@@ -1233,16 +1245,17 @@ def getSkeleton(mol):
                 b += [ni[1]==2 for ni in fneis[i] if ni[0] in r]
             if sum(b)==2:
                 pseudbr.append(nx)
-                
+
     if pseudbr:
-        bridx = ['*']*(len(pseudbr)+n)+brid
+        bridx = ['b']*(len(pseudbr)+n)+brid
         ringAx = getRingA(ringidx, pseudbr)
         fsk, name = checkFlavSK(ringidx, pseudbr+benzeneidx, ringAx, bridx)
         if len(fsk)==1 and fsk[0][0][2] in benzeneidx and fsk[0][0][0] in pseudbr:
             if name[0] == 'flavanone':
-                return fsk, 'tetrahydroflavanones', (ringidx, benzeneidx, brid)
+                skix = getskidx(ringidx, fsk)
+                return fsk,skix,'tetrahydroflavanones',(ringidx,benzeneidx,brid)
     
-    if n<2: return None, None, None
+    if n<2: return None, None, None, None
 
     # anthocyanidin
     oix, t = [], False
@@ -1261,7 +1274,8 @@ def getSkeleton(mol):
             sk[:], names[:] = ask, name
             n -= na(sk, benzeneidx)
             if n < 2:
-                return sk, names[0], (ringidx, benzeneidx, brid)
+                skix = getskidx(ringidx, sk)
+                return sk, skix, names[0], (ringidx, benzeneidx, brid)
             # remove assigned benzene rings
             rmix, bzix, brid2 = [], [], []
             for ski in sk:  rmix += ski[0]
@@ -1270,7 +1284,7 @@ def getSkeleton(mol):
                     bzix.append(i)
                     brid2.append(brid[benzeneidx.index(i)])
         else:
-            if t: return None, None, None
+            if t: return None, None, None, None
 
     if 'bzix' not in locals():
         bzix, brid2 = benzeneidx, brid
@@ -1328,9 +1342,12 @@ def getSkeleton(mol):
 
     if nf==0:
         sk, name = checkBiflavonoidSK(ringidx, benzenes, ringA)
-        return sk, name, (ringidx, benzeneidx, brid)
+        skix = getskidx(ringidx, sk)
+        return sk, skix, name, (ringidx, benzeneidx, brid)
 
-    return sk, names, (ringidx, benzeneidx, brid)
+    skix = getskidx(ringidx, sk)
+
+    return sk, skix, names, (ringidx, benzeneidx, brid)
 
 
 """
@@ -1380,7 +1397,7 @@ def indexring(ring, stinfo, sgx, flag):
     return ring
 
 
-def indexsg(sk, sg, ringidx, names):
+def indexsg(sk, skix, sg, ringidx, names):
     """ indexing side chains """
     fneis = neis
 
@@ -1394,14 +1411,6 @@ def indexsg(sk, sg, ringidx, names):
             sgs += g
     if not sgs and len(sk)==1:
         return skgix, sgix
-
-    a = []
-    for ski in sk:
-        ai = []
-        for i in ski[0]:
-            ai += ringidx[i]
-        ai += ski[1:-1]
-        a.append(ai)
     
     exs = ['coumestan', 'pterocarpan', 'dihydropterocarpan']
     skt, ixt, sgsi = [], [], []
@@ -1411,7 +1420,7 @@ def indexsg(sk, sg, ringidx, names):
         sgsi[:] = sgs[:]
         for i in xrange(lsk):
             if i != ii:
-                sgsi += a[i]
+                sgsi += skix[i]
                 
         l, skgixi, sgixi = len(ski[0]), [], []
         if (l == 3 and ski[-1] != 'x') or (l == 4 and names[ii] not in exs):
@@ -1513,7 +1522,7 @@ def indexsg(sk, sg, ringidx, names):
 
                 for ij in xrange(lsk):
                     if ij != ii:
-                        if any(ni[0] in a[ij] for ni in fneis[skt[i]]):
+                        if any(ni[0] in skix[ij] for ni in fneis[skt[i]]):
                             skgixi.append(ixt[i])
                             sgixi.append(('sk', ij, skt[i]))
         
@@ -1557,6 +1566,56 @@ Modify:
     which store canonical SMILES, number of atoms and name of the group.
 
 """
+
+def getsidenets(sk, skix, sginfo):
+    """ get networks of side groups """
+    sgps, skgix, sgix = sginfo
+    fneis = neis
+    if not sgix: return 'There is not any side group around the skeleton.\n'
+
+    lsk, skixset = len(sk), [set(ix) for ix in skix]
+    
+    sdneis, sdsets, sdinfo = {}, {}, {}
+    for key in sgps.keys():
+        if not sgps[key]['atomIndex']: continue
+        kx = 'ring' if 'ring' in key else 'chain'
+
+        cns = []
+        for gi in sgps[key]['atomIndex']:
+            t = set()
+            for j in gi:
+                t.update([ni[0] for ni in fneis[j]])
+            cns.append(t)
+        sdneis[key] = cns
+        sdsets[key] = [set(gi) for gi in sgps[key]['atomIndex']]
+        sdinfo[key] = kx
+    
+    s = ''
+    for key in sgps.keys():
+        if not sgps[key]['atomIndex']: continue
+
+        s += key+':\n'
+        n = len(sgps[key]['groupName'])
+        for i in xrange(n):
+            s += 'side group %s (%d) connects to ' %(sgps[key]['groupName'][i],i)
+            t = ''
+            for j in xrange(lsk):
+                if skixset[j]&sdneis[key][i]:
+                    t += ' %d,'%j
+            if t:
+                s += 'skeletons%s ' %t if len(t)>3 else 'skeleton%s ' %t
+
+            for key2 in sgps.keys():
+                kx, t = sdinfo[key2], ''
+                for j in xrange(len(sgps[key2]['groupName'])):
+                    if j != i and key2!=key and sdsets[key][i]&sdneis[key2][j]:
+                        t += ' %d,'%j
+                if t:
+                    s += '%s groups%s' %(kx,t) if len(t)>3 else '%s group%s' %(kx,t)
+            
+            s = s[:-1] + '\n'
+    return s
+
 
 def getsidegroupdist(sk, names, sginfo):
     """ get distributions of side groups around skeleton """
@@ -1602,7 +1661,7 @@ def getsidegroupdist(sk, names, sginfo):
                             else:
                                 gpname = '%s%s'%(namepre,gpname)
                             break
-                si = "%s-%s"%(skgix[i][j], gpname)
+                si = "%s-%s (%d)"%(skgix[i][j], gpname, ik)
                 sc.append(si)
         if sc:
             s += 'skeleton %d (%s): '%(i+1, names[i]) + '; '.join(sc) + '\n'
@@ -2201,7 +2260,7 @@ def chainGroupMatch(mol, querys):
     return matchedix, mgix
 
 
-def getSidechains(mol, skeleton, ringinfo):
+def getSidechains(mol, skeleton, skix, ringinfo):
     """
     Get side chains of the molecule after specifying the skeletons
     """
@@ -2211,10 +2270,9 @@ def getSidechains(mol, skeleton, ringinfo):
     skidx, rmrg, brs, rmrgix = set(), set(), [], set()
     for sk in skeleton:
         rmrgix.update(sk[0])
-        skidx.update(sk[1:-1])
         for i in sk[0]:
             rmrg.update(ringinfo[0][i])
-    skidx.update(rmrg)
+    for skixi in skix: skidx.update(skixi)
     rgset = [set(ringinfo[0][i]) for i in xrange(len(ringinfo[0])) if i not in rmrgix]
     rgset += [set(rg) for rg in rgix if rg not in ringinfo[0]]
     
@@ -2323,33 +2381,27 @@ def getSidechains(mol, skeleton, ringinfo):
     if mol.countAtoms()>0:
         return mg, False
     
-    return mg, True
+    return mg, True    
 
 
 def getmoleculeInfo(string):
     """ Get information of molecule """
     
     mol = loadmol(string)
-
-    if mol.countComponents()>1:
-        raise ValueError('Multiple components are unsupported in identifying flavonoids.')
-
-    if not validmolcheck(mol.canonicalSmiles()):
-        raise ValueError('Elements except CHNOS are not allowed as a candidate of flavonoid.')
     
     mol.dearomatize()               # convert aromatic structure to Kekule form
-    sk, names, ringinfo =  getSkeleton(mol)
+    sk, skix, names, ringinfo =  getSkeleton(mol)
     
     if not sk or not names:
-        return None, None, None
-    
-    mg, validsd = getSidechains(mol, sk, ringinfo)
+        return None, None, None, None
+
+    mg, validsd = getSidechains(mol, sk, skix, ringinfo)
     if not validsd:
         raise ValueError('Unexcepted side groups or elements exist in flavonoids.')
 
-    skgix, sgix = indexsg(sk, mg, ringinfo[0], names)
+    skgix, sgix = indexsg(sk, skix, mg, ringinfo[0], names)
 
-    return sk, names, (mg, skgix, sgix)
+    return sk, skix, names, (mg, skgix, sgix)
 
 
 if __name__=='__main__':

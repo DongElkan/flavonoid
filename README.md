@@ -1,4 +1,4 @@
-Module "flavonoid" is used to identify the class of flavonoids according to the input molecular identifiers and facilitate the interpretation of mass spectra derived from the molecules, with the help of indigo toolkit.
+"flavonoid" is a pure Python module used to identify the class of flavonoids according to the input molecular identifiers and facilitate the interpretation of mass spectra derived from the molecules, with the help of indigo toolkit.
 
 #**Usage**
     
@@ -26,6 +26,8 @@ Thus all groups can be found in *path*. If *path* is empty, the groups can be fo
 
     fv.addsidegroup(name,smiles)
     
+Once the side group is added to the library, classifying flavonoid and matching side groups should be re-implemented, using `fv = Flavonoids(s)`.
+	
 In addition, basic properties such as molecular weight, exact molecular weight, formula can also be obtained, and the image can be generated.
 
 #**Classes of flavonoids**
@@ -34,10 +36,12 @@ The classes of flavonoids are summarized in **flavonoids_skeleton.pdf** provided
 #**Prerequisites**
 Python 2.7
 
+* This module is not tested on Python 3. If Python 3 is installed to run the module, *2to3* can be adopted to transform the modules *mol_interpreter*, *sidechain_props* and *flavonoid* into valid Python 3 program.
+
 #**Contact**
 Nai-ping Dong
 
-np.dong572@gmail.com
+naiping.dong@hotmail.com
 
 #**References**
 [1] Rauter AP. [Nomenclature of Flavonoids (IUPAC Provisional Recommendations)](http://iupac.org/recommendation/nomenclature-of-flavonoids/).
