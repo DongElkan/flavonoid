@@ -7,6 +7,7 @@ ChemSpider database) and ..sdf (in PubChem database) are accepted.
 import os, sys
 from multiprocessing import Process
 import mol_interpreter as mi
+from mol_interpreter import FlavonoidException, loadmol, validmolcheck, getnames, getinchi, getsidenets, getsidegroupdist, generatemolimage, sideChains
 from sidechain_props import addgroup
 
 if sys.version_info[0]==3:
@@ -21,23 +22,23 @@ def validflavonoid(string):
     mol = mi.loadmol(string)
 
     if mol.countComponents()>1:
-        raise ValueError('Multiple components are unsupported in identifying flavonoids.')
+        raise FlavonoidException(1)
 
-    if not mi.validmolcheck(mol.canonicalSmiles()):
-        raise ValueError('Elements except CHNOS are not allowed as a candidate of flavonoid.')
+    if not validmolcheck(mol.canonicalSmiles()):
+        raise FlavonoidException(2)
 
-    if mol.countSSSR() >= 20:
+    if mol.countSSSR() >= 15:
             p = Process(target=mi.getmoleculeInfo, args=(string, ))
             p.start()
 
-            # Wait 8 seconds for matching groups
+            # Wait 6 seconds for matching groups
             p.join(6)
 
             if p.is_alive():
                 # Terminate
                 p.terminate()
                 p.join()
-                raise RuntimeError('Group matching times out.')
+                raise FlavonoidException(3)
             
     return mol
 
@@ -48,7 +49,7 @@ class Flavonoids(object):
 
         mol = validflavonoid(string)
 
-        sk, skix, names, sginfo = mi.getmoleculeInfo(string)
+        sk, skix, names, sginfo, glcnum = mi.getmoleculeInfo(string)
         if not sk:
             raise ValueError('This is not a flavonoid.')
 
@@ -56,6 +57,7 @@ class Flavonoids(object):
         self.identifier = string
         self.skinfo = (sk, skix, names)
         self.sginfo = sginfo
+        self.glcnumbering = glcnum
 
     def getcanonicalSmiles(self):
         """ canonical SMILES """
@@ -63,7 +65,7 @@ class Flavonoids(object):
 
     def className(self):
         """ class name of the flavonoid """
-        return mi.getnames(self.skinfo[2])
+        return getnames(self.skinfo[2])
     
     def exactMass(self):
         """ exact mass of input molecule """
@@ -79,19 +81,19 @@ class Flavonoids(object):
 
     def getInchi(self):
         """ get InChI """
-        return mi.getinchi(self.identifier)
+        return getinchi(self.identifier)
 
     def getallSidegroups(self):
         """ get all side groups """
-        print mi.getsidenets(self.skinfo[0], self.skinfo[1], self.sginfo)
+        print getsidenets(self.skinfo[0], self.skinfo[1], self.sginfo, self.glcnumbering)
 
     def getSidegroups(self):
         """ get side groups around the skeleton """
-        print mi.getsidegroupdist(self.skinfo[0], self.skinfo[2], self.sginfo)
+        print getsidegroupdist(self.skinfo[0], self.skinfo[2], self.sginfo)
 
     def generateImage(self, filename):
         """ Generate image of current molecule """
-        mi.generatemolimage(self.identifier, filename)
+        generatemolimage(self.identifier, filename)
 
     def generateSidegroups(self, path=None):
         """ generate all side groups """
@@ -110,8 +112,7 @@ class Flavonoids(object):
                 
         for key in sideChains.keys():
             for g in sideChains[key]:
-                gm = loadmol(g['smiles'])
-                mi.idgrender.renderToFile(gm,'%s.png'%g['name'])
+                generatemolimage(g['smiles'],'%s.png'%g['name'])
 
         os.chdir(cwd)
 
