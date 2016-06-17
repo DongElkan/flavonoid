@@ -33,6 +33,33 @@ with open('sidechain.json','r') as f:
     sideChains = json.load(f)
     
 
+class FlavonoidException(Exception):
+    """ flavonoid exceptions """
+    def __init__(self, errid):
+        self.id = errid
+        
+    def __str__(self):
+        if self.id==1:
+            return 'Multiple components are unsupported in identifying flavonoids.'
+        elif self.id==2:
+            return 'Elements except CHNOS are not allowed as a candidate of flavonoid.'
+        elif self.id==3:
+            return 'Group matching times out.'
+        elif self.id==4:
+            return 'This is not a flavonoid.'
+        elif self.id==5:
+            return 'Can not load molecule from the input identifier.'
+        elif self.id==6:
+            return 'Charged atoms except oxygen or charges except +1 are not allowed as a candidate of flavonoid.'
+        elif self.id==7:
+            return 'Unexcepted side groups, elements or radical atoms exist in flavonoids.'
+        elif self.id==8:
+            return 'Unexpected side group including nitrogens in a flavonoid.'
+        elif self.id==9:
+            return 'Too condensed distribution of benzene rings which unlikely appears as a flavonoid.'
+
+
+
 def mis(l):
     """
     Maximum independent set of a list.
@@ -110,6 +137,50 @@ def validmolcheck(smiles):
     if letts.translate(None, "chons"):
         return False
     return True
+
+
+def validnitrogencheck(molobj):
+    """
+    check whether nitrogen linkage is valid in the molecule:
+    -- N-N or N-O linkage is not allowed
+    -- double bond with one destination as N is not allowed except that
+       the bond locates in a ring
+    """
+    neic = []
+    for atom in molobj.iterateAtoms():
+        r = False
+        if atom.symbol().lower()=='n':
+            neic[:] = [(ni.bond().bondOrder(), ni.symbol(), ni.bond().topology(), ni)
+                         for ni in atom.iterateNeighbors()]
+            for d, s, p, a in neic:
+                if s.lower()!='c':
+                    return False
+                if d>=2 and p==CHAIN:
+                    return False
+    
+    return True
+
+
+def validringdistcheck(ringidx, aromaticName):
+    """
+    check whether distribution of benzene rings is valid in the molecule
+    as a flavonoid, if three benzene rings bonding together (i.e., having
+    shared bonds between any two) or more then 2 bonded benzene groups
+    exist, raise exception.
+    """
+    nr, setrg = len(ringidx), [set(rg) for rg in ringidx]
+    bcs = []
+    for i in xrange(nr):
+        if not aromaticName[i]: continue
+        bci = [j for j in xrange(nr) if setrg[i]&setrg[j] and aromaticName[j] and j!=i]
+        if len(bci)>=2:
+            if not bcs:
+                bcs.append(set(bci))
+            elif not any(bi.issuperset(bci) or bi.issubset(bci) for bi in bcs):
+                bcs.append(set(bci))
+
+    if len(bcs) > 1:
+        raise FlavonoidException(9)
     
 
 def loadmol(string):
@@ -129,7 +200,7 @@ def loadmol(string):
         try:
             return idgin.loadMolecule(string)
         except:
-            raise ValueError('Can not load molecule from identifier %s'%string)
+            raise FlavonoidException(5)
 
 
 def generatemolimage(string, filename):
@@ -154,11 +225,31 @@ def getnames(names):
     """ get name of the molecule """
     if isinstance(names,str):
         return names
+    
     elif all(x=='flavan-3-ol' for x in names) and len(names)==2:
         return 'proanthocyanidin'
+    
     elif len(names) > 1:
+        if any('adduct' in s for s in names):
+            if all('chalcone' in s for s in names):
+                return 'chalcone %smer'%(numberprefix(len(names)-1))[:-1]
+            else:
+                nc = [s for s in names if 'chalcone' in s]
+                nf = [s for s in names if 'chalcone' not in s]
+                if len(nc) == 1 and len(nf) == 1:
+                    return 'chalcone-%s'%nf[0]
+                elif len(nf) == 1:
+                    return 'chalcone %smer-%s'%(numberprefix(len(nc)-1)[:-1], nf[0])
+                else:
+                    nn1, nn2 = numberprefix(len(nc)-1)[:-1], numberprefix(len(nf)-1)
+                    return 'chalcone %s-%sflavonoid'%(nn1, nn2)
         return '%sflavonoid: '%(numberprefix(len(names)-1))+', '.join(names)
+    
     elif len(names)==1:
+        if names[0]=='chalcone_adduct':
+            return 'chalcone adduct'
+        elif names[0]=='chalcone_da_adduct':
+            return 'chalcone Diels-Alder adduct'
         return names[0]
     
     
@@ -172,16 +263,16 @@ def miters(iter1,iter2,flag=False):
         return iter([(x,y) for x in iter1 for y in iter2])
 
 
-def numrgass(assrings, idx):
+def numrgass(assrings, aromaticName):
     """ Return number of rings assigned """
     t = []
     for info in assrings:
         t += info[0]
-    return len(set([i for i in t if i in idx]))
+    return len(set([i for i in t if aromaticName[i]]))
 
 
 def getskidx(ringidx, sk):
-    """ get the indices of identified skeletons """
+    """ get the indices of atoms in identified skeletons """
     skix = []
     for ski in sk:
         tix = []
@@ -225,12 +316,20 @@ def benzeneRingID(ringObjs, ringIdx):
     """
     # pre-declaration to faster the use of global variable
     fneis = neis
-    
-    benzeneidx, brid = [], []      # indices and types of benzene ring in all rings
+
     nrg, setrg = len(ringIdx), [set(rg) for rg in ringIdx]
     rsmiles = [r.clone().smiles() for r in ringObjs]
 
+    aromaticName = [None]*nrg
+
+    brc = []
     for i in xrange(nrg):
+        brc.append(all(j=='c' for j in rsmiles[i]) or
+                   rsmiles[i].count('C')==ringObjs[i].countAtoms())
+    
+    for i in xrange(nrg):
+
+        if not brc[i]: continue
 
         f = False
         for j in ringIdx[i]:
@@ -244,24 +343,38 @@ def benzeneRingID(ringObjs, ringIdx):
         rsmile = rsmiles[i]
         
         if rsmile.count('c')==6:
-            benzeneidx.append(i)
-            brid.append('b')
+            aromaticName[i] = 'b'
             continue
 
-        if rsmile.count('C') != ringObjs[i].countAtoms(): continue
-        
         nc, db, tp = rsmile.count('C'), rsmile.count("="), None
-        
+                
         if db==3 and nc==6:
             tp = 'b'
 
-        if not tp and nc == 6 and db == 2:
+        # check whether the ring is a benzene if it is surrounded by other
+        # benzene rings
+        if not tp and nc == 6 and db >= 1:
+            cbs = []
             for j in xrange(nrg):
-                if len(setrg[i]&setrg[j]) == 2 and rsmiles[j].count("=") >= 2:
+                if len(setrg[i]&setrg[j]) == 2 and rsmiles[j].count("=") > 2:
+                    cbs.append(setrg[i]&setrg[j])
+
+            t = True
+            for j in setrg[i]:
+                if not any(j in cbi for cbi in cbs):
+                    k = [ni[0] for ni in fneis[j] if ni[0] in setrg[i] and ni[1]==2]
+                    if any(cbi.issuperset(k) for cbi in cbs):
+                        t = False
+                        break
+            if t:
+                if len(cbs)>0 and db==2:
                     tp = 'b'
-                    break
+                elif len(cbs)>1 and db==1:
+                    tp = 'b'
+                elif db==2:
+                    tp = 'bx' # candidate benzene ring
                     
-        if not tp and nc >= 5:
+        if not tp or tp=='bx':
             if db>=1:
                 b2 = [b for b in ringObjs[i].iterateBonds() if b.bondOrder() == 2]
                 a2idx = [b.destination().index() for b in b2]+\
@@ -292,11 +405,29 @@ def benzeneRingID(ringObjs, ringIdx):
                 if len(c2o) == 3 and len(set(c2o)&set(c2nei)) == 0:
                     tp = 'c'                                  # cyclohexane-1,3,5-trione
 
-        if tp:
-            benzeneidx.append(i)
-            brid.append(tp)
+        aromaticName[i] = tp
 
-    return benzeneidx, brid
+    # recheck those unidentified or candidate benzene rings
+    while True:
+        t = True
+        for i in xrange(nrg):
+            if brc[i] and (not aromaticName[i] or aromaticName[i]=='bx'):
+                nn = 0
+                for j in xrange(nrg):
+                    if len(setrg[i]&setrg[j])==2 and aromaticName[j]=='b':
+                        nn += 1
+                if aromaticName[i] == 'bx' and nn > 0:
+                    aromaticName[i] = 'b'
+                    t = False
+                elif not aromaticName[i] and nn == 3:
+                    aromaticName[i] = 'b'
+                    t = False
+
+                if aromaticName[i] == 'bx': aromaticName[i] = None
+
+        if t: break
+
+    return aromaticName
 
 
 def getRings(mol, checkBenzene = True):
@@ -314,11 +445,11 @@ def getRings(mol, checkBenzene = True):
                 ringidx.append([atom.index() for atom in r.iterateAtoms()])
                 ringObjs.append(r)
 
-        if len(ringidx)<2:  return None, None, None
+        if len(ringidx)<2:  return None, None
 
-        benzeneidx, brid = benzeneRingID(ringObjs, ringidx)
+        aromaticName = benzeneRingID(ringObjs, ringidx)
 
-        return ringidx, benzeneidx, brid
+        return ringidx, aromaticName
     
     else:
         
@@ -327,7 +458,7 @@ def getRings(mol, checkBenzene = True):
         return ringidx
 
 
-def getRingA(ringidx, benzeneidx):
+def getRingA(ringidx, aromaticName):
     """ Get candidate ring A, i.e., a benzene like ring with side chains -C- and -O-
         bonding same benzene ring bond.
         Return information around ring A: index of benzene ring that ring A belongs
@@ -338,7 +469,10 @@ def getRingA(ringidx, benzeneidx):
     fneis = neis
     
     ringA = []
-    for i in benzeneidx:
+    for i in xrange(len(ringidx)):
+        if not aromaticName[i]:
+            continue
+        
         idxs = ringidx[i]
         for j in idxs:
             # C(10)-C(4)
@@ -354,10 +488,30 @@ def getRingA(ringidx, benzeneidx):
     return ringA
 
 
-def classFlav(ringidx, sk, brix, brid):
+def classFlav(ringidx, sk, aromaticName):
     """
     Classify flavonoids into subclasses
     """
+    if isinstance(sk,str):
+        if sk=='c':
+            return 'chalcone'
+        elif sk=='dc':
+            return 'dihydrochalcone'
+        elif sk=='cq':
+            return 'chalcone-quinol'
+        elif sk=='oc':
+            return 'oxodihydrochalcone'
+        elif sk=='pc':
+            return 'pentahydrochalcone'
+        elif sk=='cc':
+            return 'chalcone_cyclopentenedione'
+        elif sk=='au':
+            return 'aurone'
+        elif sk=='da':
+            return 'dihydroaurone'
+        else:
+            return None
+    
     if len(sk[0])>4: return None
     
     # pre-declaration to faster the use of global variable
@@ -382,6 +536,7 @@ def classFlav(ringidx, sk, brix, brid):
     oxyset = set([atom[0] for atom in fatoms if atom[1]=='o'])
     
     idxA, idxC = ringidx[tsk[0]], ringidx[tsk[1]]
+    brix = [i for i in xrange(len(ringidx)) if aromaticName[i]]
     
     # reindex of ring C, starting from O; C in ring A bonding to O is
     # indexed as 2, then other C in ring A is 3, ..., and C in ring C bonding
@@ -431,12 +586,27 @@ def classFlav(ringidx, sk, brix, brid):
         oc = list(oxyset&set(ringidx[j]))
         if oc:
             ot = any(ni[0] in idxC for ni in fneis[oc[0]])
-            if noC[i] == 6 and oc:
-                if ot and allb1:
+            if noC[i] == 6:
+                if ot:
                     if lj == 6:
-                        return 'peltogynoid'
+                        return 'peltogynoid' if allb1 else 'dehydropeltogynoid'
                     elif lj == 5:
-                        return 'dihydroflavonol C3-C2\' ether linkage'
+                        if allb1:
+                            return 'dihydroflavonol C3-C2\' ether linkage (R5)'
+                        elif bc5:
+                            return 'flavone C3-C2\' ether linkage (R5)'
+                else:
+                    if lj == 6:
+                        if allb1:
+                            return 'dihydroflavonol C3-C2\' ether linkage (R6)'
+                        elif bc5:
+                               return 'flavone C3-C2\' ether linkage (R6)'
+                    elif lj == 7:
+                        if any(ni[0] in ringidx[tsk[2]] for ni in fneis[oc[0]]):
+                            if allb1:
+                                return 'dihydroflavonol C3-C2\' ether linkage (R7)'
+                            elif bc5:
+                               return 'flavone C3-C2\' ether linkage (R7)'
             elif noC[i] == 5 and oc:
                 if lj == 6 and not ot:
                     return 'dehydrorotenoid' if bc5 else 'rotenoid'
@@ -452,7 +622,7 @@ def classFlav(ringidx, sk, brix, brid):
                         return 'dihydrocoumaronochromone'
     if len(tsk) == 4: return None
 
-    typeA, typeB = brid[brix.index(tsk[0])], brid[brix.index(tsk[2])]
+    typeA, typeB = aromaticName[tsk[0]], aromaticName[tsk[2]]
     allbr = typeA=='b' and typeB=='b'
     
     if sk[-1] == 'hf' and allbr:
@@ -466,18 +636,20 @@ def classFlav(ringidx, sk, brix, brid):
         elif b4==2 and bc == 2:
             return '3-benzylidene-4-chromanone'
             
-    if noC[i]==6 and allbr:
-        
-        if b4==2 and bc5:
-            return 'flavonol' if b5==1 else 'flavone'
-        elif b4==2 and allb1:
-            return 'dihydroflavonol' if b5==1 else 'flavanone'
-        elif b4==1 and allb1:
-            return 'flavan-3,4-diol' if b5==1 else 'flavan-4-ol'
-        elif bc4 and bc6:
-            return 'anthocyanidin'
-        elif allb1:
-            return 'flavan-3-ol' if b5==1 else 'flavan'
+    if noC[i]==6:
+        if typeB=='q' and typeA=='b' and allb1:
+            return 'flavanquinone'
+        elif allbr:
+            if b4==2 and bc5:
+                return 'flavonol' if b5==1 else 'flavone'
+            elif b4==2 and allb1:
+                return 'dihydroflavonol' if b5==1 else 'flavanone'
+            elif b4==1 and allb1:
+                return 'flavan-3,4-diol' if b5==1 else 'flavan-4-ol'
+            elif bc4 and bc6:
+                return 'anthocyanidin'
+            elif allb1:
+                return 'flavan-3-ol' if b5==1 else 'flavan'
         
     elif noC[i]==5:
         
@@ -502,7 +674,7 @@ def classFlav(ringidx, sk, brix, brid):
     return None
 
 
-def checkStilbenoSK(ringidx, benzeneidx, sk, name):
+def checkStilbenoSK(ringidx, brix, sk, name):
     """ Check stilbeno skeleton to check whether it exists, which is a candidate
         stilbeno-flavonoid
         If Stilbeno group is found, the indices of rings are added to the ring
@@ -520,14 +692,15 @@ def checkStilbenoSK(ringidx, benzeneidx, sk, name):
     fneis = neis
     iters = miters
 
-    a = -1
+    a, assbr = -1, []
     for skj in sk:
         a += 1
-        if not name[a] != 'flavan-3-ol': continue
+        if not name[a] != 'flavan-3-ol' or len(skj[0]) != 3: continue
         
-        for i,j in iters(benzeneidx, benzeneidx, flag=True):
+        for i,j in iters(brix, brix, flag=True):
 
             if i in skj[0] or j in skj[0]: continue
+            if i in assbr or j in assbr: continue
 
             # the benzene ring that bonds to ring C of skj
             ki = skj[2]
@@ -550,11 +723,12 @@ def checkStilbenoSK(ringidx, benzeneidx, sk, name):
                         skj[0] += [i,j]
                         skj += [idx[0], k, ix, nei1[0], c[0][0], iy, 'sf']
                         name[a] = 'stilbeno-flavonoid'
+                        assbr += [i, j]
     
     return sk, name
 
 
-def checkBiflavonoidSK(ringidx, benzeneidx, ringA):
+def checkBiflavonoidSK(ringidx, brix, ringA):
     """
     Check for biflavonoids which have complex structure like Lophirone A.
     """
@@ -587,7 +761,7 @@ def checkBiflavonoidSK(ringidx, benzeneidx, ringA):
     for i, j in miters(d3, d3, True):
         if any(ni[0] == j for ni in fneis[i]) and any(ni[0] == i for ni in fneis[j]):
             bz3 = []
-            for k in benzeneidx:
+            for k in brix:
                 if any(ni[0] in ringidx[k] for ni in fneis[i]):
                     bz3.append(k)
 
@@ -597,7 +771,7 @@ def checkBiflavonoidSK(ringidx, benzeneidx, ringA):
 
     # get chromane ring
     cr = []
-    for i in benzeneidx:
+    for i in brix:
         for j in xrange(len(ringidx)):
             if i != j and len(setrg[i]&setrg[j])==2 and rno[j]==1:
                 c = setrg[i]&setrg[j]
@@ -624,7 +798,7 @@ def checkBiflavonoidSK(ringidx, benzeneidx, ringA):
             
             c2 = [ni[0] for ni in fneis[j] if ni[0] not in ringidx[k] and ni[2]=='c']
             for l in c2:
-                for m in benzeneidx:
+                for m in brix:
                     if m!=i and m!=j and m!=c[1] and\
                        any(ni[0] in ringidx[m] for ni in fneis[l]):
                         sk += [[c[1], k, m, bzs[0], bzs[1]], i,j]
@@ -638,7 +812,7 @@ def checkBiflavonoidSK(ringidx, benzeneidx, ringA):
     return sk, None
 
 
-def checkFlavSK(ringidx, bridx, ringA, brid):
+def checkFlavSK(ringidx, aromaticName, ringA, ring7):
     """
     Check whether it is the skeleton of a flavonoid,  flavonolignan or
     homoisoflavonoids, and return indices of benzene rings and ring C.
@@ -667,6 +841,7 @@ def checkFlavSK(ringidx, bridx, ringA, brid):
     fneis, fatoms = neis, atoms
 
     nr = len(ringidx)
+    brix = [i for i in xrange(nr) if aromaticName[i]]
     setrg, lr, clr, rno, i = [], [], [], [], -1
     for ix in ringidx:
         i += 1
@@ -682,8 +857,8 @@ def checkFlavSK(ringidx, bridx, ringA, brid):
     # set up ring Bs to include the identification of homoisoflavonoids
     # i.e., a (phenyl)methyl structure, which will be used as a benzyl as for
     # identification of flavonoids or isoflavonoids
-    rgb = bridx[:]
-    for i in bridx:
+    rgb = brix[:]
+    for i in brix:
         for j in ringidx[i]:
             c = [v[0] for v in fneis[j]
                  if v[2]=='c' and v[0] not in ringidx[i] and v[4]==CHAIN]
@@ -696,15 +871,14 @@ def checkFlavSK(ringidx, bridx, ringA, brid):
         t = rA[1:]
         jx = j if isinstance(j, int) else j[0]      # candidate ring B
         for k in clr:
-            if t[-1] not in setrg[k] or t[1] not in setrg[k]: continue
-            if len(setrg[i]&setrg[k]) != 2: continue
-            if len(setrg[jx]&setrg[k]) > 0: continue
+            if not setrg[k].issuperset(t) or len(setrg[i]&setrg[k])!=2 or\
+               setrg[jx]&setrg[k]:
+                continue
 
             cs = [ix for ix in setrg[k] if ix not in setrg[i] and ix != rA[-1]]
             # remove C in C=O in ring C
             o = [ni[0] for ni in fneis[t[1]] if ni[1]==2 and ni[2]=='o']
             if o:
-                o = o[0]
                 cs.remove(t[1])
 
             # flavonoids or isoflavonoids
@@ -713,13 +887,10 @@ def checkFlavSK(ringidx, bridx, ringA, brid):
                     ix = [v[0] for v in fneis[ic] if v[0] in setrg[j] and v[2]=='c']
                     if ix:
                         ix = ix[0]
-                        skt = [[i, k, j], t[0],t[1],ic,ix,t[2],t[3]]
-                        if brid[rgb.index(j)] in 'bq':
-                            skt += [o, 'f'] if o else ['f']
-                        else:
-                            skt += [o, 'fd'] if o else ['fd']
+                        skt = [[i, k, j], t[0],t[1],ic,ix,t[2],t[3]]+o
+                        skt.append('f' if aromaticName[j] in 'bq' else 'fd')
                         sk.append(skt)
-                    
+                        
                         # check whether this is a flavonolignan, which a lignan
                         # group locates adjacent ring B (i.e., j)
                         g = False
@@ -746,10 +917,7 @@ def checkFlavSK(ringidx, bridx, ringA, brid):
                     ix = [v for v in fneis[ic] if v[0]==j1 and v[0] not in setrg[k]]
                     if ix:
                         ix = ix[0][0]
-                        if o:
-                            sk.append([[i,k,jx], t[0],t[1],ic,ix,j0,t[2],t[3],o,'hf'])
-                        else:
-                            sk.append([[i,k,jx], t[0],t[1],ic,ix,j0,t[2],t[3],'hf'])
+                        sk.append([[i,k,jx], t[0],t[1],ic,ix,j0,t[2],t[3]]+o+['hf'])
 
     # chech whether multiple skeletons share same benzene rings; these skeletons
     # are possibly coumestans, pterocarpans or peltogynoid;
@@ -758,6 +926,17 @@ def checkFlavSK(ringidx, bridx, ringA, brid):
     # if the chain in flavonoids (i.e., bond between ring B and C) is one of
     # the edges of another ring but the flavonoid is also not known class
     # having four rings, remove it.
+    if ring7:
+        setrg2 = setrg+[set(rg) for rg in ring7]
+        ridx2 = ringidx+ring7
+        rid = aromaticName+[None]*len(ring7)
+        nr2 = len(ridx2)
+        for ix in ring7:
+            rno.append(len([j for j in ix if fatoms[j][1]=='o']))
+            lr.append(len(ix))
+    else:
+        setrg2, ridx2, nr2, rid = setrg, ringidx, nr, aromaticName
+
     taidx, n, names = [ra[0] for ra in ringA], len(sk), [None]*len(sk)
     if n>0:
         sk4 = []
@@ -765,24 +944,27 @@ def checkFlavSK(ringidx, bridx, ringA, brid):
             if sk[i][-1] != 'f': continue
             skr = sk[i][0]
             
-            for j in xrange(nr):
-                if len(setrg[j]&setrg[skr[1]])==2 and len(setrg[j]&setrg[skr[2]])==2:
-                    if rno[j]==1 and not setrg[j]&setrg[skr[0]]:
+            for j in xrange(nr2):
+                if len(setrg2[j]&setrg2[skr[1]])==2 and len(setrg2[j]&setrg2[skr[2]])==2:
+                    if rno[j]==1 and not setrg2[j]&setrg2[skr[0]] and\
+                       not any(setrg2[j]&setrg2[k] and not k in skr and k!=j
+                               for k in xrange(nr2)):
                         skt = sk[i][:]
                         skt[0].append(j)
-                        name = classFlav(ringidx, skt, bridx, brid)
+                        name = classFlav(ridx2, skt, rid)
                         if name:
                             sk[i][:] = skt[:]
                             sk4.append(i)
                             names[i] = name
                     elif rno[j]==0 and lr[j]==5:
-                        for k in setrg[j]&setrg[skr[1]]:
+                        kt, kc = sk[i][2], setrg[j]&setrg[skr[1]]
+                        for k in kc:
                             o = [ni[0] for ni in fneis[k] if ni[2] == 'o']
                             t = any(ni[0] in ringidx[i] for ni in fneis[k])
-                            if len(o) == 1 and not t:
+                            if len(o) == 1 and not t and (kt!=k and kt in kc):
                                 sk[i][0].append(j)
                                 sk[i] = sk[i][:-1]+[o[0], 'arl']     # 4-arylchroman
-                                names[i] = classFlav(ringidx, sk[i], bridx, brid)
+                                names[i] = classFlav(ringidx, sk[i], aromaticName)
                                 sk4.append(i)
 
         setsk = [set(ski[0]) for ski in sk]
@@ -801,13 +983,13 @@ def checkFlavSK(ringidx, bridx, ringA, brid):
 
             if lr == 4:
                 if sk[i][-1] == 'fl':
-                    names[i] = classFlav(ringidx, sk[i], bridx, brid)
+                    names[i] = classFlav(ringidx, sk[i], aromaticName)
                     if n > 1:
                         # if this is flavonolignan, part of its rings is also
                         # a skeleton
                         skt = [sk[i][0][:-1]]+sk[i][1:]
                         skt[-1] = 'f'
-                        name = classFlav(ringidx, skt, bridx, brid)
+                        name = classFlav(ringidx, skt, aromaticName)
                         if name:
                             names.append(name)
                             sk.append(skt)
@@ -815,19 +997,13 @@ def checkFlavSK(ringidx, bridx, ringA, brid):
                 # check whether a third ring exists between ring A and C or
                 # ring B and ring between ring B and C, if so, remove this
                 # skeleton
-                g = False
                 r1, r2, r3, r4 = tuple(sk[i][0])
                 for k in xrange(nr):
                     if k not in sk[i][0]:
-                        if len(setrg[r1]&setrg[k])>0 and len(setrg[r4]&setrg[k])>0:
-                            g = True
-                            break
                         if len(setrg[r2]&setrg[k])>0 and len(setrg[r3]&setrg[k])>0:
-                            g = True
+                            names[i] = None
                             break
-                        
-                if g:
-                    names[i] = None
+                    
             else:
                 # bond topology between ring B and C
                 tp = [ni[4] for ni in fneis[sk[i][3]] if ni[0]==sk[i][4]][0]
@@ -838,9 +1014,9 @@ def checkFlavSK(ringidx, bridx, ringA, brid):
                     # name notation of 'f') and share same ring with standard
                     # flavonoid, ignore it.
                     if all(not setsk[i]&setsk[j] for j in xrange(n) if sk[j][-1]=='f'):
-                        names[i] = classFlav(ringidx, sk[i], bridx, brid)
+                        names[i] = classFlav(ringidx, sk[i], aromaticName)
                 else:
-                    names[i] = classFlav(ringidx, sk[i], bridx, brid)
+                    names[i] = classFlav(ringidx, sk[i], aromaticName)
 
         n = len(sk)
         sk[:], names[:]= [sk[i] for i in xrange(n) if names[i]], [m for m in names if m]
@@ -848,7 +1024,7 @@ def checkFlavSK(ringidx, bridx, ringA, brid):
     return sk, names
 
 
-def checkChalSK(ringidx, bridx, brid):
+def checkChalSK(ringidx, aromaticName):
     """
     Check the skeleton of chain flavonoid, in which the ring C is a chain, not a
     ring. This type of flavonoids is mainly composed by chalcone, dihydrochalcone
@@ -870,119 +1046,114 @@ def checkChalSK(ringidx, bridx, brid):
     fneis = neis
     iters = miters
     
-    sk, name =[], []
+    sk, name, nameid, skid =[], [], '', []
     setrg,nr,lr =[set(rg) for rg in ringidx],len(ringidx),[len(rg) for rg in ringidx]
 
     # get neighbor Cs of a benzene ring
-    brneis, delidx = [], []
-    for i in bridx:
+    brneis = []
+    for i in xrange(nr):
         tnei=[]
-        for j in ringidx[i]:
-            tnei+=[(n,j) for n in fneis[j] if n[2]=='c' and n[0] not in ringidx[i]]
+        if aromaticName[i]:
+            for j in ringidx[i]:
+                tnei+=[(n,j) for n in fneis[j] if n[2]=='c' and n[0] not in ringidx[i]]
         brneis.append(tnei)
 
-    assignedbr = set([])
-    for i, j in iters(bridx, bridx, flag=True):
+    sbr = []
+    for i, j in iters(xrange(nr), xrange(nr), flag=True):
         
-        ia, ib = bridx.index(i), bridx.index(j)
-        
-        if not brneis[ia] or not brneis[ib] or i in assignedbr or j in assignedbr:
+        if not brneis[i] or not brneis[j] or any(si.issuperset([i, j]) for si in sbr):
             continue
 
         t = False
-        for iinfo, jinfo in iters(brneis[ia], brneis[ib]):
+        for iinfo, jinfo in iters(brneis[i], brneis[j]):
             ni, i0 = iinfo      # neighbors and corresponding atom in the ring
             nj, j0 = jinfo
             i1, j1 = ni[0], nj[0]   # indices of the neighbor atoms
             
-            if i1 == j1: continue
+            if i1 == j1 or setrg[i]&setrg[j]: continue
 
             for ni2, nj2 in iters(fneis[i1], fneis[j1]):
-                if ni2[0] == nj2[0] and ni2[2] == 'c':
+                if ni2[0]==nj2[0] and ni2[2]=='c' and ni2[0]!=i0 and nj2[0]!=j0:
                     t = True
                     break
             if t: break
 
         if t:
 
+            # ketone at chalcone's chain or five-membered ring of aurone
             noxy1 = [v[0] for v in fneis[i1] if v[2]=='o' and v[1]==2]
             noxy2 = [v[0] for v in fneis[j1] if v[2]=='o' and v[1]==2]
 
-            t1 = False
             if noxy1 or noxy2:
                 # aurone
-                ix, jx, nxi, nxj = (i, j, ni2[0], nj2) if noxy1 else (j, i, nj2[0], ni2)
-                ix0, jx0, oi, ix1, jx1 = (i0, j0, noxy1[0], i1, j1) if noxy1 else\
-                                          (j0, i0, noxy2[0], j1, i1)
-                
+                nr5, o = [], []
                 for k in xrange(nr):
-                    o = []
-                    if lr[k]==5 and nxi in setrg[k] and len(setrg[k]&setrg[ix])==2:
-                        for ik in setrg[k]&setrg[ix]:
-                            o+=[v for v in fneis[ik] if v[2]=='o' and v[0] in setrg[k]]
-                            break
-                            
-                        if o:
-                            o = o[0][0]
-                            t1 = True
-                            name.append('aurone' if nxj[1] == 2 else 'dihydroaurone')
-                            sk.append([[ix, k, jx],ix0,ix1,nxi,jx1,jx0,ik,o,oi,'au'])
-                            break
+                    if lr[k]==5 and ni2[0] in setrg[k]:
+                        cks = []
+                        if len(setrg[k]&setrg[i])==2 and noxy1:
+                            nr5.append([i, k, j])
+                            cks, bj = setrg[k]&setrg[i], nj[-1]
+                            tpj = nj2[4]==CHAIN and nj[4]==CHAIN
+                        elif len(setrg[k]&setrg[j])==2 and noxy2:
+                            nr5.append([j, k, i])
+                            cks, bj = setrg[k]&setrg[j], ni[-1]
+                            tpj = ni2[4]==CHAIN and ni[4]==CHAIN
+                        for ik in cks:
+                            oc=[v for v in fneis[ik] if v[2]=='o' and v[0] in setrg[k]]
+                            if oc: o.append((oc[0][0], ik))
+                        
+                if o and len(nr5)==1 and tpj:
+                    o, ik = o[0]
+                    nameid = 'au' if bj == 2 else 'da'
+                    name.append(classFlav([],nameid,[]))
+                    nr5, i2 = nr5[0], ni2[0]
+                    if nr5[0]==i:
+                        sk.append([nr5, i0, i1, i2, j1, j0, ik, o, noxy1[0], 'au'])
+                    else:
+                        sk.append([nr5, j0, j1, i2, i1, i0, ik, o, noxy2[0], 'au'])
+                    skid.append(False)
+                    sbr.append(set(nr5))
 
-            if t1:
-                assignedbr.update(sk[-1][0])
-                continue
-            
-            # for these types of flavonoids except aurone and dihydroaurone,
-            # no any atom in the chain between two benzenes exists in other
-            # rings.
-            tps  = [i1, ni2[0], j1]
-            t = False
-            for k in tps:
-                if any(ni[4]!=CHAIN for ni in fneis[k]):
-                    t = True
-                    break
-            if t: continue
+            if nameid: continue
 
+            # other types of chalcone
             tname = []
             if noxy1 and not noxy2:
-                if brid[ia] == 'b':
-                    tname.append('chalcone' if nj2[1] >= 2 else 'dihydrochalcone')
-                elif brid[ia] in 'mq2':
-                    tname.append('chalcone-quinol')
-                if tname:
+                if aromaticName[i] == 'b':
+                    nameid = 'c' if nj2[1] >= 2 else 'dc'
+                elif aromaticName[i] in 'mq2':
+                    nameid = 'cq'
+                if nameid:
                     sk.append([[i,j], i0, i1, ni2[0], j1, j0, noxy1[0], 'c'])
-                    name.append(tname)
         
             elif noxy2 and not noxy1:
-                if brid[ib] == 'b':
-                    tname.append('chalcone' if ni2[1] >= 2 else 'dihydrochalcone')
-                elif brid[ib] in 'mq2':
-                    tname.append('chalcone-quinol')
-                if tname:
+                if aromaticName[j] == 'b':
+                    namid = 'c' if ni2[1] >= 2 else 'dc'
+                elif aromaticName[j] in 'mq2':
+                    nameid = 'cq'
+                if nameid:
                     sk.append([[j,i], j0, j1, nj2[0], i1, i0, noxy2[0], 'c'])
-                    name.append(tname)
                     
             elif noxy1 and noxy2:
                 sk.append([[i,j], i0, i1, ni2[0], j1, j0, noxy1[0], noxy2[0], 'o'])
-                name.append('oxodihydrochalcone')
+                nameid = 'oc'
                 
             elif ni2[1]==1 and nj2[1]==1:
                 noxy1 = [v[0] for v in fneis[i1] if v[2]=='o' and v[1]==1]
                 noxy2 = [v[0] for v in fneis[j1] if v[2]=='o' and v[1]==1]
                 if noxy1:
                     sk.append([[i,j], i0, i1, ni2[0], j1, j0, noxy1[0], 'c'])
-                    name.append('pentahydrochalcone')
+                    nameid = 'pc'
                 elif noxy2:
                     sk.append([[j,i], j0, j1, nj2[0], i1, i0, noxy2[0], 'c'])
-                    name.append('pentahydrochalcone')
+                    nameid = 'pc'
             
-            elif lr[i] == 6 and brid[ia]=='q2':
-                if ni[1]==2 and brid[ib]=='b' and nj2[1]==2:
+            elif lr[i] == 6 and aromaticName[i]=='q2':
+                if ni[1]==2 and aromaticName[j]=='b' and nj2[1]==2:
                     noxy = [v[0] for v in fneis[i1] if v[2]=='o' and v[1]==1]
                     if noxy:
                         sk.append([[i,j], i0, i1, ni2[0], j1, j0, noxy[0], 'c'])
-                        name.append('chalcone-quinol')
+                        nameid = 'cq'
             
             elif lr[i] == 5:
                 noxy = [v[0] for v in fneis[i1] if v[2]=='o' and v[1]==1]
@@ -992,14 +1163,273 @@ def checkChalSK(ringidx, bridx, brid):
                         xt = [ni[0] for ni in fneis[k] if ni[2]=='o' and ni[1]==2]
                         if xt:  o2.append(xt[0])
                     sk.append([[i,j], i0, i1, ni2[0], j1, j0, noxy[0]]+o2+['c'])
-                    name.append('chalcone_cyclopentenedione')
+                    nameid = 'cc'
 
-            if sk: assignedbr.update(sk[-1][0])
+            if nameid:
+                name.append(classFlav([], nameid, []))
+                sbr.append(set([i, j]))
+                nameid = ''
 
-    return sk, name
+                # for these types of flavonoids except aurone and,
+                # dihydroaurone no any atom in the chain between two
+                # benzenes exists in other rings.
+                tps, t  = [i1, ni2[0], j1], True
+                for k in tps:
+                    if any(ni[4]!=CHAIN for ni in fneis[k]):
+                        t = False
+                        break
+                if t:
+                    # for alpha and beta carbons, only -OH or -OCH3 is allowed
+                    ji, js = sk[-1][3:5], sk[-1][1:-1]
+                    for j in ji:
+                        nj = [v[0] for v in fneis[j] if v[2]!='o' and v[0] not in js]
+                        njo = [v[0] for v in fneis[j] if v[2]=='o' and v[0] not in js]
+                        if nj:
+                            t = False
+                            break
+                        elif njo:
+                            oj = njo[0]
+                            if len(fneis[oj])>1:
+                                nj2 = [v[0] for v in fneis[oj] if v[2]=='c' and v[0]!=j]
+                                if len(nj2) != 1 or len(fneis[nj2[0]]) != 1:
+                                    t = False
+                                    break
+                
+                skid.append(t)
+
+    return sk, name, skid
 
 
-def checkAnthoSK(ringidx, benzeneidx, oix):
+def checkChalpolymer(csk, cskid, name, sk, ringidx):
+    """
+    check chalcone dimers and oligomers and validate chalcone
+    """
+    # preallocation and parameter setting
+    fatom, fnei = atoms, neis
+    namex = ['chalcone', 'dihydrochalcone', 'pentahydrochalcone']
+    ncsk, nr = len(csk), len(ringidx)
+    cix = [i for i in xrange(ncsk) if name[i] in namex]
+    setrg, lenrg = [set(rg) for rg in ringidx], [len(rg) for rg in ringidx]
+    
+    # get number of double bonds in each ring
+    b2s = []
+    for i in xrange(nr):
+        b = set()
+        for k in ringidx[i]:
+            b.update(ni[0] for ni in fnei[k] if ni[0] in ringidx[i] and ni[1]==2)
+        b2s.append(b)
+
+    # get assigned benzene rings
+    brs, brixs = set(), set()
+    for ski in csk: brs.update(ski[0])
+    for ski in sk: brs.update(ski[0])
+
+    cr, cc = [], []
+    for ski in csk:
+        cr.append(set(ski[0]))
+        cc.append(set(ski[1:-1]))
+
+    dix, sbr = set(), set()
+    # since very loose criteria are applied in identifying chalcone,
+    # it is probably some flavonoids are also identified as chalcone,
+    # if this situation occurs, remove the chalcone
+    for i in xrange(ncsk):
+        if any(cr[i].issubset(ski[0]) for ski in sk):
+            dix.add(i)
+
+    # identify chalcone adducts obtained by biological synthesis reaction
+    # such as Diels-Alder reaction.
+    for i in xrange(ncsk):
+        js = set(csk[i][3:5])
+        if i in cix and not cskid[i] and i not in dix:
+            
+            if cr[i]&sbr:
+                if '_a' not in csk[i][-1]: dix.add(i)
+                continue
+
+            for k in xrange(nr):
+                if k not in brs and js.issubset(setrg[k]):
+                    tj = True
+                    for ij in cc[i]:
+                        if not all(ni[4]==CHAIN for ni in fnei[ij]):
+                            tj = False
+                            break
+                        
+                    if not tj:
+                        dix.add(i)
+                        csk[i][-1] = 'c'
+                        break
+
+                    # form six-membered ring
+                    # .. connect to other skeleton or form single ring
+                    if lenrg[k] == 6 and len(b2s[k]) >= 2:
+                        if not all(fatom[j][1]=='c' for j in setrg[k]):
+                            dix.add(i)
+                            break
+                        
+                        for j in cix:
+                            if j != i and not cr[i]&cr[j] and not cc[i]&cc[j] and\
+                               j not in dix:
+                                if len(setrg[k]&setrg[csk[j][0][-1]])==2 and \
+                                   name[i] in namex[:2] and name[j] in namex[:2]:
+                                    sbr.update(csk[i][0]+csk[j][0])
+                                    csk[i][-1] += '_a'
+                                    csk[j][-1] += '_a'
+                                    break
+                
+                    # form five-membered ring tetrohydro-furan   
+                    elif lenrg[k]==5 and sum(fatom[j][1]=='o' for j in ringidx[k])==1:
+                        t = False
+                        oi = [j for j in ringidx[k] if fatom[j][1]=='o'][0]
+                        for j in brs:
+                            if len(setrg[j]&setrg[k]) == 2 and j not in csk[i][0]:
+                                if any(ni[0] in setrg[j] for ni in fnei[oi]):
+                                    sbr.update(cr[i])
+                                    sbr.add(j)
+                                    csk[i][-1] += '_a'
+                                else:
+                                    dix.add(i)
+                                t = True
+                                break
+                        if not t:
+                            for j in cix:
+                                if j != i and len(setrg[k]&cc[j])>=2 and not cc[j]&cc[i]:
+                                    t = True
+                                    sbr.update(csk[i][0]+csk[j][0])
+                                    csk[i][-1] += '_a'
+                                    csk[j][-1] += '_a'
+                                    break
+                        if not t:
+                            dix.add(i)
+
+                    # form four-membered ring cyclobutane
+                    elif lenrg[k] == 4:
+                        if not all(fatom[j][1]=='c' for j in ringidx[k]):
+                            dix.add(i)
+                            break
+                        
+                        t = False
+                        for j in cix:
+                            if j != i and setrg[k].issuperset(csk[j][3:5]):
+                                t = True
+                                sbr.update(csk[i][0]+csk[j][0])
+                                csk[i][-1] += '_a'
+                                csk[j][-1] += '_a'
+                                break
+                        if not t:
+                            dix.add(i)
+                            break
+
+                elif lenrg[k]==5 and sum(fatom[j][1]=='o' for j in ringidx[k])==1:
+                    if len(setrg[k]&cc[i])>=2:
+                        t = False
+                        for j in brs:
+                            if len(setrg[k]&setrg[j])==2 and j not in cr[i]:
+                                t = True
+                                sbr.update(cr[i])
+                                sbr.add(j)
+                                csk[i][-1] += '_a'
+                                break
+                        if not t:
+                            dix.add(i)
+            
+        elif not 'aurone' in name[i] and not cskid[i]:
+            t = False
+            for j in js:
+                nj = [v[0] for v in fnei[j] if v[2]=='c' and v[0] not in cc[i]]
+                if len(nj)==1:
+                    for ski in sk:
+                        if any(j in ringidx[k] for k in ski[0]):
+                            t = True
+                            break
+                if t: break
+            if not t:
+                dix.add(i)
+
+    for i in dix:
+        if '_a' in csk[i][-1]:
+            dix.remove(i)
+
+    csk[:] = [csk[i] for i in xrange(ncsk) if i not in dix]
+    name[:] = [name[i] for i in xrange(ncsk) if i not in dix]
+    for i in xrange(len(csk)):
+        if '_a' in csk[i][-1]:
+            name[i] = 'chalcone_adduct'
+
+    return csk, name
+
+
+def checkDARflav(ringidx, aromaticName, ringA, sk, names):
+    """
+    check skeleton with Diels-Alder reactions, this function mainly
+    focuses to chalcone-isoprene adducts
+    """
+    fneis, fatoms = neis, atoms
+    setrg, nr, nsk = [set(rg) for rg in ringidx], len(ringidx), len(sk)
+    
+    # find two six-member rings having 3 common atoms for identifying
+    # chalcone Diels-Alder adducts
+    das = []
+    for i, j in miters(xrange(nr), xrange(nr), flag=True):
+        if len(setrg[i]&setrg[j]) == 3:
+            for rA in ringA:
+                if setrg[j].issuperset(rA[1:]) and aromaticName[rA[0]]=='b'\
+                   and all(fatoms[k][1]=='c' for k in ringidx[i]):
+                    das.append([i, j, rA[0], (rA[1:3])])
+
+    for rs in das:
+        t = False
+        if any(rs[2] in ski[0] for ski in sk):
+            for i in xrange(nsk):
+                if sk[i][-1]=='c' and setrg[rs[0]].issuperset(sk[i][3:5]):
+                    sk[i][-1] += '_da'
+                    names[i] = 'chalcone_da_adduct'
+                    t = True
+
+        if not t:    
+            for rA in ringA:
+                i = rA[0]
+                for j in xrange(nr):
+                    if i not in rs and j not in rs and setrg[j].issuperset(rA[1:])\
+                       and len(setrg[j]&setrg[rs[0]])==2:
+                        j0, j1 = rs[-1]
+                        i2 = [ni[0] for ni in fneis[rA[2]]
+                              if ni[0] in setrg[j] and ni[0] not in setrg[i]][0]
+                        ox = [ni[0] for ni in fneis[rA[2]] if ni[1]==2 and ni[2]=='o']
+                        if ox:
+                            sk.append([[i,j],rA[1],rA[2],i2,j1,j0,ox[0],'c_da'])
+                            names.append('chalcone_da_adduct')
+
+    # form six-membered ring
+    for i in xrange(nsk):
+        if sk[i][-1]=='c':
+            js, t = set(sk[i][3:5]), True
+            for j in js:
+                if any(ni[1]==2 for ni in fneis[j]):
+                    t = False
+                    break
+            if not t:
+                continue
+            
+            for k in xrange(nr):
+                if js.issubset(setrg[k]) and len(setrg[k])==6 and aromaticName[k]!='b':
+                    b2s, t = set(), True
+                    for j in ringidx[k]:
+                        b2s.update(ni[0] for ni in fneis[j]
+                                   if ni[0] in setrg[k] and ni[1]==2)
+                        if fatoms[j][1]!='c':
+                            t = False
+                            break
+                        
+                    if not any(setrg[k]&setrg[j] for j in xrange(nr) if j != k)\
+                       and len(b2s)==2 and t:
+                        sk[i][-1] += '_da'
+                        names[i] = 'chalcone_da_adduct'
+
+    return sk, names
+
+
+def checkAnthoSK(ringidx, brix, oix):
     """
     Check the skeleton of anthocyanidins
     """
@@ -1017,7 +1447,7 @@ def checkAnthoSK(ringidx, benzeneidx, oix):
         if rno[k] != 1: continue
         
         ij = [None, None]
-        for i in benzeneidx:
+        for i in brix:
             t = False
             for ni in fneis[o]:
                 
@@ -1107,7 +1537,7 @@ def checkXanthSK(ringidx, bridx):
     return sk
 
 
-def checkSpecialSK(ringidx, benzeneidx, brid, ringA):
+def checkSpecialSK(ringidx, aromaticName, ringA):
     """ Get skeleton for special flavonoids
     Elements in sk: a list of indices of rings making up the skeleton, indices of:
         .. C in ring A bonding to ring C (for 'b') or chain (for 'm')
@@ -1128,7 +1558,7 @@ def checkSpecialSK(ringidx, benzeneidx, brid, ringA):
 
     nr = len(ringidx)
     if nr >= 3:
-        brs = [benzeneidx[i] for i in xrange(len(brid)) if brid[i]=='b']
+        brs = [i for i in xrange(nr) if aromaticName[i]=='b']
         if len(brs)>=2:
             setrg, rno, k = [], [], []
             for i in xrange(nr):
@@ -1156,7 +1586,11 @@ def checkSpecialSK(ringidx, benzeneidx, brid, ringA):
                                 sk.append([[r,k[i],j], r0,r1,c,c1,r2,r3, 'b'])
                                 break
 
-    for i,j in iters(benzeneidx, benzeneidx, flag=True):
+    for i,j in iters(xrange(nr), xrange(nr), flag=True):
+        
+        if not aromaticName[i] or not aromaticName[j]:
+            continue
+        
         for i0, j0 in iters(ringidx[i],ringidx[j]):
             for nei1, nei2 in iters(fneis[i0], fneis[j0]):
                 if nei1[4]==CHAIN and nei2[4]==CHAIN:
@@ -1169,10 +1603,12 @@ def checkSpecialSK(ringidx, benzeneidx, brid, ringA):
                              if ni[0]==j1 and ni[2]=='c' and ni[4]==CHAIN]
                         if not c: continue
                         c1 = [ni[0] for ni in fneis[j1] if ni[2]=='c' and ni[1]==1
-                              and ni[0]!=i0 and ni[4]==CHAIN and ni[0]!=i1]
-                        if c1:
-                            sk.append([[i, j], i0, i1, j1, j0, o[0], c1[0], 'm'])
-                    elif brid[benzeneidx.index(i)]=='q':
+                              and ni[0]!=j0 and ni[4]==CHAIN and ni[0]!=i1]
+                        for ci in c1:
+                            if len(fneis[ci]) == 1:
+                                sk.append([[i, j], i0, i1, j1, j0, o[0], ci, 'm'])
+                                break
+                    elif aromaticName[i]=='q':
                         c = [ni[0] for ni in fneis[i1]
                              if ni[2]=='c' and ni[0]!=i0 and ni[0]!=j0 and ni[4]==CHAIN]
                         if c:
@@ -1185,28 +1621,56 @@ def checkSpecialSK(ringidx, benzeneidx, brid, ringA):
     return sk
 
 
-def checkMultipleSKs(ringidx, sk):
+def checkValidSKs(ringidx, sk, names):
     """
     Check skeletons to identify whether those skeletons share same rings or
     bonds, if so, maximum independent set algorithm is used to get skeleton set
     with most number of independent skeletons (i.e., no sharing bonds between
-    any two skeletons). Also, a priori check is performed if two skeletons with
-    different number of rings share same bonds. In this case, skeleton with
-    more rings is retained.
+    any two skeletons).
+    Besides, a priori check is performed for chalcones to ensure valid
+    groups around three-membered chains.
     Output: a list with indices retained
     """
-    n = len(sk)
-    skrs, lenskr = [ski[0] for ski in sk], [len(ski[0]) for ski in sk]
-    sets = [set(ring) for ring in ringidx]
+    fnei = neis
 
-    c = lambda sk1, sk2, s: len(set(sk1[0])&set(sk2[0]))>0 or\
-        any(len(set(sk1[1:])&s[k])>0 for k in sk2[0]) or\
-        any(len(set(sk2[1:])&s[k])>0 for k in sk1[0])
-
-    delix = []
+    delix = set()
+    skrs, n = [set(ski[0]) for ski in sk], len(sk)
+    sets = [set(rg) for rg in ringidx]
+    
+    # remove chalcones in which atoms in the three-membered
+    # chain is part of other rings, or any other skeleton sharing same
+    # ring or atom with chalcone_adduct
+    # for pentahydrochalcones, very strict criterion is set, at which
+    # not any other group links to -OH group
     for i in xrange(n):
-        if all(c(sk[i], sk[j], sets) and j!=i for j in xrange(n)):
-            delix.append(i)
+        if sk[i][-1]=='c' or sk[i][-1]=='o':
+            if names[i]=='pentahydrochalcone':
+                if len(fnei[sk[i][-2]])>1:
+                    delix.add(i)
+                else:
+                    for k in sk[i][2:5]:
+                        if any(ni[0] not in sk[i][1:] or ni[4]!=CHAIN for ni in fnei[k]):
+                            delix.add(i)
+                            break
+                continue
+            
+            for k in sk[i][2:5]:
+                if any(ni[4]!=CHAIN for ni in fnei[k]):
+                    delix.add(i)
+                    break
+        elif '_a' in sk[i][-1] or '_da' in sk[i][-1]:
+            delix.update(j for j in xrange(n) if skrs[i]&skrs[j] and j!=i)
+
+    # if they share same atoms or rings, select one
+    c = lambda sk1, sk2, s: set(sk1[0])&set(sk2[0]) or\
+        any(set(sk1[1:])&s[k] for k in sk2[0]) or\
+        any(set(sk2[1:])&s[k] for k in sk1[0])
+
+    for i in xrange(n):
+        if i in delix: continue
+        t = [c(sk[i],sk[j],sets) for j in xrange(n) if j!=i and j not in delix]
+        if t and all(t):
+            delix.add(i)
     
     retains = [i for i in xrange(n) if i not in delix]
 
@@ -1229,31 +1693,35 @@ def getSkeleton(mol):
     
     sk, skix, names =[], [], []
     
-    ringidx, benzeneidx, brid = getRings(mol)
-    if not ringidx or not benzeneidx:
+    ringidx, aromaticName = getRings(mol)
+    
+    if not ringidx or not aromaticName or not any(aromaticName):
         return None, None, None, None
-
-    n, nr = len(benzeneidx), len(ringidx)
+    validringdistcheck(ringidx, aromaticName)
+    
+    nr = len(ringidx)
+    brix = [i for i in xrange(nr) if aromaticName[i]]
+    n = len(brix)
 
     # tetrahydroflavanones
-    pseudbr, nx = [], -1
+    pseudbr, j = [None]*nr, -1
     for r in ringidx:
-        nx += 1
-        if nx not in benzeneidx and all(fatom[i][1]=='c' for i in r) and len(r)==6:
+        j += 1
+        if not aromaticName[j] and all(fatom[i][1]=='c' for i in r) and len(r)==6:
             b = []
             for i in r:
                 b += [ni[1]==2 for ni in fneis[i] if ni[0] in r]
             if sum(b)==2:
-                pseudbr.append(nx)
+                pseudbr[j] = 'b'
 
-    if pseudbr:
-        bridx = ['b']*(len(pseudbr)+n)+brid
+    if any(pseudbr):
+        pseudbr2 = [pseudbr[i] or aromaticName[i] for i in xrange(nr)]
         ringAx = getRingA(ringidx, pseudbr)
-        fsk, name = checkFlavSK(ringidx, pseudbr+benzeneidx, ringAx, bridx)
-        if len(fsk)==1 and fsk[0][0][2] in benzeneidx and fsk[0][0][0] in pseudbr:
+        fsk, name = checkFlavSK(ringidx, pseudbr2, ringAx, [])
+        if len(fsk)==1 and aromaticName[fsk[0][0][2]] and pseudbr[fsk[0][0][0]]:
             if name[0] == 'flavanone':
                 skix = getskidx(ringidx, fsk)
-                return fsk,skix,'tetrahydroflavanones',(ringidx,benzeneidx,brid)
+                return fsk,skix,'tetrahydroflavanones',(ringidx,aromaticName)
     
     if n<2: return None, None, None, None
 
@@ -1266,88 +1734,98 @@ def getSkeleton(mol):
             if ri:
                 oix.append((atom[0], ri[0]))
         elif atom[2] != 0:
-            raise ValueError('Charged atoms except oxygen or charges except +1 are not allowed as a candidate of flavonoid.')
+            raise FlavonoidException(6)
 
     if oix:
-        ask, name = checkAnthoSK(ringidx, benzeneidx, oix)
+        ask, name = checkAnthoSK(ringidx, brix, oix)
         if ask:
             sk[:], names[:] = ask, name
-            n -= na(sk, benzeneidx)
+            n -= na(sk, aromaticName)
             if n < 2:
                 skix = getskidx(ringidx, sk)
-                return sk, skix, names[0], (ringidx, benzeneidx, brid)
+                return sk, skix, names[0], (ringidx, aromaticName)
             # remove assigned benzene rings
-            rmix, bzix, brid2 = [], [], []
+            rmix, brid = [], aromaticName[:]
             for ski in sk:  rmix += ski[0]
-            for i in benzeneidx:
+            for i in brix:
                 if i not in rmix:
-                    bzix.append(i)
-                    brid2.append(brid[benzeneidx.index(i)])
+                    brid[i] = None
         else:
             if t: return None, None, None, None
 
     if 'bzix' not in locals():
-        bzix, brid2 = benzeneidx, brid
+        brid = aromaticName
 
-    ringA = getRingA(ringidx,bzix)
-    benzenes = [bzix[i] for i in xrange(n) if brid2[i]=='b']
+    ringA = getRingA(ringidx,brid)
+    benzenes = [i for i in xrange(nr) if brid[i]=='b']
 
     # flavonoids
-    flavsk, name = checkFlavSK(ringidx, bzix, ringA, brid2)
+    # .. get indices of seven-membered rings
+    ring7 = []
+    for r in mol.iterateRings(7,7):
+        r7ix = [atm.index() for atm in r.iterateAtoms()]
+        if not any(set(r7ix).issuperset(rg) for rg in ringidx):
+            ring7.append(r7ix)
+    brid7 = [None]*len(ring7)
+        
+    flavsk, name = checkFlavSK(ringidx, brid, ringA, ring7)
     if flavsk:
         flavsk, name = checkStilbenoSK(ringidx, benzenes, flavsk, name)
+        sk[:] = [flavsk[i] for i in xrange(len(flavsk)) if name[i]]
+        names[:] = [name[i] for i in xrange(len(flavsk)) if name[i]]
+        # if this is stilbeno-flavonoid, return the identified skeletons directly
         nf = len(flavsk)
-        sk[:] = [flavsk[i] for i in xrange(nf) if name[i]]
-        names[:] = [name[i] for i in xrange(nf) if name[i]]
+        if nf>1:
+            dix = []
+            j = [sk[i][-1]=='sf' for i in xrange(nf)]
+            if j:
+                j = j[0]
+                for i in xrange(nf):
+                    if i != j and set(sk[i][0])&set(sk[j][0]):
+                        dix.append(i)
+            if dix:
+                sk[:] = [sk[i] for i in xrange(nf) if i not in dix]
+                names[:] = [names[i] for i in xrange(nf) if i not in dix]
+                skix = getskidx(ringidx, sk)
+                return sk, skix, names, (ringidx, aromaticName)
 
     # chalcone
-    csk, name = checkChalSK(ringidx, bzix, brid2)
+    ringidx2, brid2 = ringidx+ring7, brid+brid7
+    csk, cname, cskid = checkChalSK(ringidx, brid)
     if csk:
-        sk += csk
-        names += name
+        ncsk = len(csk)
+        if ncsk>1 or (sk and ncsk):
+            csk, cname = checkChalpolymer(csk, cskid, cname, sk, ringidx2)
+        sk = sk+csk
+        names = names+cname
+    sk, names = checkDARflav(ringidx2, brid2, ringA, sk, names)
+    if sk:
+        retains = checkValidSKs(ringidx, sk, names)
+        sk[:] = [sk[i] for i in retains]
+        names[:] = [names[i] for i in retains]
 
-    n -= na(sk, benzeneidx)
     # special flavonoids
-    if n > 1:
+    for ski in sk:
+        for i in ski[0]:
+            if i in benzenes:
+                benzenes.remove(i)
+                brid2[i] = None
+    if len(benzenes)>=1:
         xsk = checkXanthSK(ringidx, benzenes)
-        osk = checkSpecialSK(ringidx, bzix, brid2, ringA)
+        osk = checkSpecialSK(ringidx, brid, ringA)
         osk += xsk
         for ski in osk:
-            name = classFlav(ringidx, ski, bzix, brid2)
-            names.append(name)
-        sk += osk
+            if not any(set(ski[0])&set(skj[0]) for skj in sk):
+                name = classFlav(ringidx, ski, brid)
+                names.append(name)
+                sk.append(ski)
 
-    # specify name to flavonoids
-    nf = len(sk)
-    if nf > 1:
-        sfsk, sfname = [], []
-        for ski in sk:
-            if ski[-1] == 'sf':
-                sfsk[:] = ski[:]
-                sfname[:] = 'stilbeno-flavonoid'
-                break
-        if sfsk:
-            rix = []
-            for i in xrange(nf):
-                if not set(sk[i][0])&set(sfsk[0]):
-                    rix.append(i)
-        else:
-            rix = list(xrange(nf))
+    if not sk:
+        sk, names = checkBiflavonoidSK(ringidx, benzenes, ringA)
 
-        if len(rix)>1:
-            retains = checkMultipleSKs(ringidx, [sk[i] for i in rix])
-            rix[:] = [rix[i] for i in retains]
-            sk[:] = sfsk+[sk[i] for i in rix]
-            names[:] = sfname+[names[i] for i in rix]
-
-    if nf==0:
-        sk, name = checkBiflavonoidSK(ringidx, benzenes, ringA)
-        skix = getskidx(ringidx, sk)
-        return sk, skix, name, (ringidx, benzeneidx, brid)
-
-    skix = getskidx(ringidx, sk)
-
-    return sk, skix, names, (ringidx, benzeneidx, brid)
+    skix = getskidx(ringidx2, sk)
+    
+    return sk, skix, names, (ringidx2, aromaticName+brid7)
 
 
 """
@@ -1357,9 +1835,56 @@ the IUPAC provisional recommendation for Nomenclature of Flavonoids
 groups that bond to skeleton and saccharides.
 """
 
+def indexglc(glcrings, ringidx):
+    """ index glycosides of flavonoids"""
+    fnei, fatom = neis, atoms
+    glcix = []
+
+    for glcring in glcrings:
+        glcixi = []
+        rix = [rg for rg in ringidx if set(glcring).issuperset(rg)][0]
+        cix = set([i for i in glcring if fatom[i][1]=='c'])
+        epc = cix.difference(rix)
+        
+        # candidate anomeric carbon
+        for i in cix:
+            if any(ni[2]=='o' and ni[1]==2 for ni in fnei[i]):
+                c = [ni[0] for ni in fnei[i] if ni[2]=='c' and ni[0] in cix][0]
+                if sum(ni[2]=='o' for ni in fnei[c])==2 and\
+                   any(ni[2]=='o' and ni[0] in rix for ni in fnei[c]):
+                    glcixi += [i, c]
+                    break
+                
+            if any(ni[2]=='o' and ni[0] in rix for ni in fnei[i]) and not\
+               any(ni[0] in epc for ni in fnei[i]):
+                if sum(ni[2]=='o' for ni in fnei[i])>=2:
+                    glcixi.append(i)
+                    break
+                elif len(fnei[i])>2 and not glcixi:
+                    # in this situation, terminal O is bounded to the first C
+                    # and OH at this C carbon is replaced by other group
+                    glcixi.append(i)
+                    break
+
+        while True:
+            flag = True
+            for i in cix:
+                if i not in glcixi:
+                    if any(ni[0]==glcixi[-1] for ni in fnei[i]):
+                        glcixi.append(i)
+                        flag = False
+                        break
+
+            if flag:
+                break
+        glcix.append(glcixi[:])
+
+    return glcix
+
+
 def indexring(ring, stinfo, sgx, flag):
     """
-    Index ring according to start atom information (stinfo) and
+    index ring according to start atom information (stinfo) and
     flag. "flag" is an indicator to indicate the type of ring, the
     valid input is A, B or C.
     "sgx" is the indices of all atoms in side chains
@@ -1516,7 +2041,8 @@ def indexsg(sk, skix, sg, ringidx, names):
                     j = -1
                     for g in sg[key]['atomIndex']:
                         j += 1
-                        if skt[i] in g or any(ni[0] in g for ni in fneis[skt[i]]):
+                        if skt[i] in g or\
+                           any(ni[0] in g and ni[0] not in skt for ni in fneis[skt[i]]):
                             skgixi.append(ixt[i])
                             sgixi.append((key, j, skt[i]))
 
@@ -1567,28 +2093,30 @@ Modify:
 
 """
 
-def getsidenets(sk, skix, sginfo):
+def getsidenets(sk, skix, sginfo, glcnumbering):
     """ get networks of side groups """
     sgps, skgix, sgix = sginfo
     fneis = neis
     if not sgix: return 'There is not any side group around the skeleton.\n'
 
     lsk, skixset = len(sk), [set(ix) for ix in skix]
+    glcix = sginfo[0]['ringGroup']['glcIndex']
     
-    sdneis, sdsets, sdinfo = {}, {}, {}
+    sdneis, sdsets, sdkey, sdnum = {}, {}, {}, {}
     for key in sgps.keys():
         if not sgps[key]['atomIndex']: continue
         kx = 'ring' if 'ring' in key else 'chain'
 
-        cns = []
+        cns = []            # neighbors of all side groups
         for gi in sgps[key]['atomIndex']:
             t = set()
             for j in gi:
-                t.update([ni[0] for ni in fneis[j]])
+                t.update(ni[0] for ni in fneis[j] if ni[0] not in gi)
             cns.append(t)
         sdneis[key] = cns
         sdsets[key] = [set(gi) for gi in sgps[key]['atomIndex']]
-        sdinfo[key] = kx
+        sdkey[key] = kx
+        sdnum[key] = len(sgps[key]['groupName'])
     
     s = ''
     for key in sgps.keys():
@@ -1606,10 +2134,42 @@ def getsidenets(sk, skix, sginfo):
                 s += 'skeletons%s ' %t if len(t)>3 else 'skeleton%s ' %t
 
             for key2 in sgps.keys():
-                kx, t = sdinfo[key2], ''
-                for j in xrange(len(sgps[key2]['groupName'])):
-                    if j != i and key2!=key and sdsets[key][i]&sdneis[key2][j]:
-                        t += ' %d,'%j
+                if key2 not in sdkey.keys(): continue
+                kx, t, sc = sdkey[key2], '', ''
+                for j in xrange(sdnum[key2]):
+                    if not (j==i and key2==key) and sdsets[key][i]&sdneis[key2][j]:
+                        # identify the positions of glycosides linking to other glycosides
+                        if 'ring' in key and kx=='ring' and i in glcix and j in glcix:
+                            il, jl = glcix.index(i), glcix.index(j)
+                            c = list(sdsets[key][i]&sdneis[key2][j])[0]
+                            o = sdsets[key][i]&sdsets[key2][j]
+                            if o:
+                                xi = glcnumbering[il].index(c)+1
+                                o=list(o)[0]
+                                oi=[ni[0] for ni in fneis[o] if ni[0] in sdsets[key][j]]
+                                oi = oi[0]
+                                xj = glcnumbering[jl].index(oi)+1
+                                t += ' [(%d%s%d)-O-] ring group %d,'%(xi,u'\u2192',xj,j)
+                            else:
+                                e = 'C'
+                                ci=[ni[0] for ni in fneis[c] if ni[0] in sdsets[key][i]]
+                                z = [ni[2]=='c' for ni in fneis[ci[0]] if ni[0]==c][0]
+                                if z:
+                                    xi = glcnumbering[il].index(c)+1
+                                else:
+                                    e = 'O'
+                                    xi = glcnumbering[il].index(ci[0])+1
+                                z=[(ni[2]=='c', ni[0]) for ni in fneis[c]
+                                   if ni[0] in sdsets[key][j]][0]
+                                if z[0]:
+                                    ci = z[1]
+                                else:
+                                    e = 'O'
+                                    ci = [ni[0] for ni in fneis[z[1]] if ni[0]!=c][0]
+                                xj = glcnumbering[jl].index(ci)+1
+                                t+=' [(%d%s%d)-%s-] ring group %d,'%(xi,u'\u2192',xj,e,j)
+                        else:
+                            t += ' %d,'%j
                 if t:
                     s += '%s groups%s' %(kx,t) if len(t)>3 else '%s group%s' %(kx,t)
             
@@ -1623,11 +2183,8 @@ def getsidegroupdist(sk, names, sginfo):
     if not sgix: return 'There is not any side group around the skeleton.\n'
 
     fatoms, fneis = atoms, neis
-    glcnames = ['glucuronide','alloside','galactoside','glucoside',
-                'rhamnoside','apioside','arabinofuranoside','xyloside',
-                'xylopyranoside','arabinoside']
     
-    lsg = [len(g) for g in sgix]
+    lsg, glcix = [len(g) for g in sgix], sgps['ringGroup']['glcIndex']
     s, i  = '', -1
     for ski in sk:
         i += 1
@@ -1651,14 +2208,16 @@ def getsidegroupdist(sk, names, sginfo):
                             sc.insert(xi, si)
                             kix.insert(xi, ik)
             else:
-                gpname = sgps[gk]['groupName'][ik]
-                if gk=='ringGroup' and any(sn in gpname for sn in glcnames):
+                gpname, namepre = sgps[gk]['groupName'][ik], ''
+                if 'ring' in gk:
                     for ix in sgps[gk]['atomIndex'][ik]:
                         if any(ni[0] == gmi for ni in fneis[ix]):
-                            namepre = 'O-' if fatoms[ix][1]=='o' else 'C-'
-                            if 'or' in gpname:
-                                gpname = '%s(%s)'%(namepre,gpname)
-                            else:
+                            if ik in glcix:
+                                namepre = 'O-' if fatoms[ix][1]=='o' else 'C-'
+                            elif fatoms[ix][1]=='o':
+                                namepre = 'O-'
+                            
+                            if namepre:
                                 gpname = '%s%s'%(namepre,gpname)
                             break
                 si = "%s-%s (%d)"%(skgix[i][j], gpname, ik)
@@ -1700,7 +2259,7 @@ def isaromatic(brs):
     return False
 
 
-def isvalidringmatch(mhi, rgset, qix, mol, qinfo):
+def isvalidringmatch(mhi, rgset, qix, mol, qinfo, checkgly=False):
     """
     check whether the match of ring group is valid
     """
@@ -1709,18 +2268,19 @@ def isvalidringmatch(mhi, rgset, qix, mol, qinfo):
     if not any(rg.issubset(mhi) for rg in rgset):
         return False
 
-    # check whether the chain is part of a ring, if so, return False thus
-    # the match is rejected.
+    # check whether the chain is part of a ring that is not assigned,
+    # if so, return False, thus the match is rejected
     fneis = neis
-    i, chainix, q, qsml, isbr, num = qinfo
-    chainset = set([mhi[i] for i in xrange(num) if qix[i] in chainix])
+    _, chainix, _, qsml, isbr, num = qinfo
+    chainset = set([mhi[i] for i in xrange(len(qix)) if qix[i] in chainix])
     
     for rg in rgset:
         cmr = chainset&rg
-        if len(cmr)>=2:
-            for j in cmr:
-                if any(nei[0] in cmr for nei in fneis[j]):
-                    return False
+        for j in cmr:
+            if any(ni[0] in rg and ni[0] in mhi for ni in fneis[j]):
+                return False
+    
+    if checkgly: return True
     
     # check the exact match of the ring group to avoid false assignment
     # due to the structure match resulted from tautomer match, if not passed
@@ -1850,7 +2410,7 @@ def removeatoms(mol, setig, rgset, rmrginfo, qr):
             idg.setOption('dearomatize-verification',False)
             mol.dearomatize()
             idg.setOption('dearomatize-verification',True)
-            
+
         for rg in rgset:
             for br in brset:
                 b = list(rg&br)
@@ -1866,7 +2426,7 @@ def removeatoms(mol, setig, rgset, rmrginfo, qr):
 ##        idgrender.renderToFile(mol,'m2.png')
 
 
-def checkQueryGroup(ringidx, name, ckr=True):
+def getQueryGroup(ringidx, name, ckr=True):
     """
     Check side group
     ringidx     indices of rings out of skeleton rings
@@ -1899,6 +2459,16 @@ def checkQueryGroup(ringidx, name, ckr=True):
             crix = getRings(q, checkBenzene = False)
             if gp['checkglc']:
                 cx[:] = [j for j in xrange(n) if j not in crix[0]]
+                delatm = []
+                for j in cx:
+                    catm = q.getAtom(j)
+                    if catm.symbol() == 'C':
+                        delatm.append(j)
+                    elif catm.symbol() == 'O' and any(nei.bond().bondOrder()==2 for
+                                                      nei in catm.iterateNeighbors()):
+                        delatm.append(j)
+                for j in delatm:
+                    cx.remove(j)
                 qidxs.append([cx[:],i])
             else:
                 if len(crix) == 1:
@@ -1975,7 +2545,7 @@ def aromaticRingMatch(benzenerings, rmix):
                           and ni[0] not in rmix and ni[4]==CHAIN]
                     if not c3:
                         gpc.append([c1, c2])
-                        namec.append('Phenylethylene')
+                        namec.append('phenylethylene')
                         continue
                     
                     for k in c3:
@@ -1993,26 +2563,26 @@ def aromaticRingMatch(benzenerings, rmix):
                                       and ni[4]==CHAIN and ni[1]==1]
                                 if oh:
                                     gpc.append([c1,c2,k,o1,o2,o3[0],oh[0]])
-                                    namec.append('Caffeic acid')
+                                    namec.append('caffeic acid')
                                 else:
                                     oh = [ni[0] for ni in fneis[oc[2]] if ni[2]=='o'
                                           and ni[4]==CHAIN and ni[1]==1]
                                     if oh:
                                         gpc.append([c1,c2,k,o1,o2,o3[0],oh[0]])
-                                        namec.append('Caffeic acid')
+                                        namec.append('caffeic acid')
                                     else:
                                         gpc.append([c1,c2,k,o1,o2,o3[0]])
                                         namec.append('p-Coumaric acid')
                             else:
                                 gpc.append([c1, c2, k, o1, o2])
-                                namec.append('Cinnamic acid')
+                                namec.append('cinnamic acid')
                             
                         elif o1:
                             gpc.append([c1, c2, k, o1[0]])
-                            namec.append('Cinnamyl alcohol')
+                            namec.append('cinnamyl alcohol')
                         else:
                             gpc.append([c1, c2, k])
-                            namec.append('Hydroxystyryl')
+                            namec.append('hydroxystyryl')
         if gpc:
             l = [len(g) for g in gpc]
             i = l.index(max(l))
@@ -2022,17 +2592,171 @@ def aromaticRingMatch(benzenerings, rmix):
     return gp, name
 
 
+def glycosideMatch(mol, querys, qidxs, rgset, sdset):
+    """ match glycoside groups """
+    fnei, rmatoms       = neis, removeatoms
+    g, gix = [], []
+    # prior check whether candiate glycosyl rings exist
+    begly = []
+    for rg in rgset:
+        # get number of O in and beside the ring
+        oinr, ober, b2 = set(), set(), set()
+        for i in rg:
+            for ni in fnei[i]:
+                if ni[0] in rg:
+                    if ni[1] >= 2:
+                        b2.add(i)
+                    if ni[2] == 'o':
+                        oinr.add(ni[0])
+                else:
+                    if ni[1]==1 and ni[2]=='o':
+                        ober.add(i)
+                    elif ni[1]>=2:
+                        b2.add(i)
+        if len(oinr)==1 and len(ober)>=2 and not b2:
+            begly.append(rg)
+
+    if not begly:
+        return g, gix
+            
+    substructureMatcher = idg.substructureMatcher
+    loadQueryMolecule   = idg.loadQueryMolecule
+    exactMatch          = idg.exactMatch
+    loadMolecule        = idg.loadMolecule
+    iis = [qi[1] for qi in qidxs]
+    hasChiral = mol.isChiral()
+    terminix = []
+    for i in set([qi[-1] for qi in querys]):
+        terminix.append([qi[0] for qi in querys if qi[-1]==i][-1])
+    idgrender.renderToFile(mol,'m2.png')
+    
+    # match groups
+    rmrg, delatms, atmc, atmic, cg, cgix, lp = set(), set(), [], [], [], [], 0
+    for qc in querys:
+        i, _, q, qsml, _, num = qc
+        ij = iis.index(i)
+
+        qams  =  [atom for atom in q.iterateAtoms()]
+        qamix = [atm.index() for atm in qams]
+        for j in xrange(len(qidxs[ij][0])+1):
+            atmc[:] = qams[:]
+            atmic[:] = qamix[:]
+            # further checking by delete an atom around the ring
+            q2 = loadMolecule(qsml)
+            if j:
+                q = loadQueryMolecule(qsml)
+                atmic.pop(qidxs[ij][0][j-1])
+                atmc.pop(qidxs[ij][0][j-1])
+                for ni in qams[qidxs[ij][0][j-1]].iterateNeighbors():
+                    ix = atmic.index(ni.index())
+                q.getAtom(qidxs[ij][0][j-1]).remove()
+                q2.getAtom(qidxs[ij][0][j-1]).remove()
+            nqstereo = q2.countStereocenters()
+
+            if substructureMatcher(mol).countMatches(q):
+                
+                matcher = substructureMatcher(mol)
+                t = False
+            
+                for mhi in matcher.iterateMatches(q):
+                    mhc = [mhi.mapAtom(atm).index() for atm in atmc]
+                    if isvalidringmatch(mhc, rgset, atmic, mol, qc, True):
+                        # further check, they should be matched exactly
+                        # by stereostructure
+                        submol = mol.createSubmolecule(mhc)
+                        nmstereo = submol.countStereocenters()
+                        if (nqstereo and nmstereo and exactMatch(submol,q2,'STE')) or\
+                            nqstereo<nmstereo or (nqstereo==0 and nmstereo==0):
+                            # the deleted atom should be replaced by other groups
+                            if (j and not all(ni[0] in mhc for ni in fnei[mhc[ix]]))\
+                               or not j:
+                                cg.append(mhc)
+                                cgix.append(i)
+                                lp, t = num, True
+
+                if t and j: break
+
+        # in the above iterations, all possible matches are obtained
+        # to select possibly correct matches, following criteria are
+        # applied:
+        # 1. match obtaining maximum atoms is retained;
+        # 2. if several maximums are found, lowest index in 'gix' is retained.
+        if cg and i in terminix:
+            lg = [len(gi) for gi in cg]
+            selix = []
+            for rg in rgset:
+                ixs = []
+                for j in xrange(len(cg)):
+                    if rg.issubset(cg[j]):
+                        ixs.append(j)
+                
+                if len(ixs)==1:
+                    selix.append(ixs[0])
+                    rmrg.update(rg)
+                    continue
+                elif not ixs:
+                    continue
+
+                ml = max(lg[j] for j in ixs)
+                ix2 = [j for j in ixs if lg[j]==ml]
+                if len(ix2)>1:
+                    # if multiple structure matched with same length
+                    # minimum query group index is adopted
+                    gix2 = [cgix[j] for j in ix2]
+                    selix.append(ix2[gix2.index(min(gix2))])
+                else:
+                    selix.append(ix2[0])
+
+                rmrg.update(rg)
+
+            g += [cg[j] for j in selix]
+            gix += [cgix[j] for j in selix]
+            for gi in g:
+                delatms.update(gi)
+                
+                # update side groups
+                for k in xrange(len(sdset)):
+                    if sdset[k].issuperset(gi):
+                        sdset[k].difference_update(gi)
+                        for j in gi:
+                            if any(ni[0] in sdset[k] for ni in fnei[j]):
+                                sdset[k].add(j)
+
+            # remove atoms from the molecule and stored ring groups
+            rgset[:] = [rg for rg in rgset if not rg.issubset(delatms)]
+            rmatoms(mol, delatms, rgset, (rmrg, []), False)
+
+            if not rgset:
+                return g, gix
+            else:
+                t = False
+                for rg in rgset:
+                    if any(rg==bi for bi in begly):
+                        t = True
+                        break
+                if not t:
+                    return g, gix
+            
+            cg[:] = []
+            cgix[:] = []
+
+    return g, gix
+
+
 def ringGroupMatch(mol, rgsets, querys, qidxs):
     """
     Find ring groups from current molecule
     """
+    matchedix, mgix  = [], []
+    if mol.countSSSR()==0:
+        return matchedix, mgix
     # pre-declare local functions and variables
     loadQueryMolecule   = idg.loadQueryMolecule
     substructureMatcher = idg.substructureMatcher
     rmatoms             = removeatoms
+    fnei                = neis
 
     # preallocation and initialization
-    matchedix, mgix  = [], []
     rgset, brset= rgsets
     # identifier for identifying whether the ring is a subset of another object
     brsubgroupid = [rg.issubset for rg in brset]
@@ -2052,16 +2776,26 @@ def ringGroupMatch(mol, rgsets, querys, qidxs):
     sdset[:] = rix
     msd, nl = max(len(g) for g in sdset), len(sdset)
 
+    # match glycosides
+    iis = [qi[1] for qi in qidxs]
+    glyqs = [qi for qi in querys if qi[0] in iis]
+    if any(qi[-1]<=msd+1 for qi in glyqs):
+        matchedix, mgix = glycosideMatch(mol, glyqs, qidxs, rgset, sdset)
+    if not rgset:
+        return matchedix, mgix
+    msd, nl = max(len(sdi) for sdi in sdset), len(sdset)
+##    idgrender.renderToFile(mol,'m2.png')
+
     # match groups
     rmrg, delatms, delrg, ismatched = set(), set(), [], False
     while True:
         nm = 0
         for qc in querys:
-            i, chainix, q, qsml, bi, num = qc
+            i, _, q, qsml, bi, num = qc
             # if length of ring group smaller than, or number of rings
             # larger than that of the query, or no benzene ring exists in
             # side chain while the query group has, continue
-            if not havebr and bi and num>msd: continue
+            if havebr-bi or num>msd or 'N' in qsml or i in iis: continue
             
             qatoms  =  [atom for atom in q.iterateAtoms()]
             qatomix = [atm.index() for atm in qatoms]
@@ -2069,9 +2803,10 @@ def ringGroupMatch(mol, rgsets, querys, qidxs):
             if substructureMatcher(mol).countMatches(q):
                 delatms.clear()
                 matcher = substructureMatcher(mol)
+                
                 for mhi in matcher.iterateMatches(q):
                     mhc = [mhi.mapAtom(atm).index() for atm in qatoms]
-
+                    
                     if isvalidringmatch(mhc, rgset, qatomix, mol, qc):
                         delatms.update(mhc)
                         matchedix.append(mhc)
@@ -2082,6 +2817,9 @@ def ringGroupMatch(mol, rgsets, querys, qidxs):
                         for k in xrange(nl):
                             if sdset[k].issuperset(mhc):
                                 sdset[k].difference_update(mhc)
+                                for j in mhc:
+                                    if any(ni[0] in sdset[k] for ni in fnei[j]):
+                                        sdset[k].add(j)
 
                 # remove atoms from the molecule and stored ring groups
                 if delatms:
@@ -2142,64 +2880,155 @@ def ringGroupMatch(mol, rgsets, querys, qidxs):
                 for k in xrange(nl):
                     if sdset[k].issuperset(c):
                         sdset[k].difference_update(c)
+                        for j in c:
+                            if any(ni[0] in sdset[k] for ni in fnei[j]):
+                                sdset[k].add(j)
 
             if ismatched:
                 if havebr:
-                    t = True
+                    t = False
                     for g in rgset:
                         if any(subi(g) for subi in brsubgroupid):
-                            t = False
+                            t = True
                             break
-                    if t:
-                        havebr = False
+                    havebr = t
 
                 # get the max length of side groups containing rings
+##                idgrender.renderToFile(mol,'m%d.png'%i)
                 rix[:] = []
-                for g in sdset:
-                    apdrg = []
-                    for rg in rgset:
-                        if g.intersection(rg):
-                            apdrg += rg
-                    if apdrg:
-                        rix.append(g.union(apdrg))
-                sdset[:] = rix
+                for rg in rgset:
+                    t = True
+                    for i in xrange(nl):
+                        if sdset[i].intersection(rg):
+                            t = False
+                            sdset[i].update(rg)
+                            break
+                    if t:
+                        rix.append(rg)
+
+                sdset += rix
+                sdset[:] = [g for g in sdset if any(g.issuperset(rg) for rg in rgset)]
                 msd, nl = max(len(g) for g in sdset), len(sdset)
                 ismatched = False
         
         if nm==0:
             break
 
-    # further checking by delete an atom around the ring, this is restricted to
-    # glucose and similar groups
-    iis = [qi[0] for qi in querys]
-    for qx in qidxs:
-        i = qx[1]
-        ix = iis.index(i)
-        for j in qx[0]:
-            q = loadQueryMolecule(querys[ix][3])
-            q.getAtom(j).remove()
-            qatoms  =  [atom for atom in q.iterateAtoms()]
-            delatms.clear()
-            for mhi in substructureMatcher(mol).iterateMatches(q):
-                c = [mhi.mapAtom(atm).index() for atm in qatoms]
-                matchedix.append(c)
-                mgix.append(i)
-                delatms.update(c)
-            if delatms:
-                rmatoms(mol, delatms, rgset, (rmrg, brset), False)
-
 ##    idgrender.renderToFile(mol,'m2.png')
     return matchedix, mgix
 
 
+def alkaloidMatch(mol, querys, rgset):
+    """ match alkaloid group """
+    fatom, fnei = atoms, neis
+    substructureMatcher = idg.substructureMatcher
+    rmatoms             = removeatoms
+
+    g, gix = [], []
+
+    if rgset:
+        t = False
+        for rg in rgset:
+            if any(fatom[i][1]=='n' for i in rg):
+                t = True
+                break
+        if not t:
+            return g, gix
+
+        rmrg, delrg = set(), []
+        for qc in querys:
+            i, chainix, q, qsml, bi, num = qc
+
+            qatoms  =  [atom for atom in q.iterateAtoms()]
+            while True:
+                mh = substructureMatcher(mol,'TAU').match(q)
+                if not mh: break
+                c = [mh.mapAtom(atm).index() for atm in qatoms]
+
+                rmrg.clear()
+                delrg[:] = []
+                for rg in rgset:
+                    if rg.issubset(c):
+                        rmrg.update(rg)
+                        delrg.append(rg)
+                if not delrg: break
+
+                g.append(c)
+                gix.append(i)
+
+                # remove atoms from the molecule and stored ring groups
+                rgset[:] = [rg for rg in rgset if rg not in delrg]
+                rmatoms(mol, set(c), rgset, (rmrg, []), False)
+                if not rgset:
+                    return g, gix
+        
+        for rg in rgset:
+            if any(fatom[i][1]=='n' for i in rg):
+                raise FlavonoidException(8)
+            
+    else:
+        if not any(fatom[a.index()][1]=='n' for a in mol.iterateAtoms()):
+            return g, gix
+
+        for qc in querys:
+            i, q, num, qsml = qc
+
+            qatoms  =  [atom for atom in q.iterateAtoms()]
+            while True:
+                mh = substructureMatcher(mol,'TAU').match(q)
+                if not mh: break
+                c = [mh.mapAtom(atm).index() for atm in qatoms]
+                
+                # check whether C=O is near N, otherwise, exceptions
+                # will be probably raised
+                t = False
+                for j in c:
+                    if fatom[j][1]=='c' and any(x[1]==2 and x[2]=='o' for x in fnei[j]):
+                        t = True
+                        break
+                    elif fatom[j][1]=='n':
+                        for ni in fnei[j]:
+                            if ni[2]=='c' and\
+                               any(x[1]==2 and x[2]=='o' for x in fnei[ni[0]]):
+                                t = True
+                                break
+                        if t: break
+                        
+                if not t:
+                    if qsml == 'CNC':
+                        # this should be dimethylamino, thus C should be
+                        # the terminal methyl group
+                        for j in c:
+                            if fatom[j][1]=='c' and len(fnei[j]) > 1:
+                                raise FlavonoidException(8)
+                    elif qsml == 'N':
+                        # this should be the terminal NH2
+                        if any(len(fnei[j])>1 for j in c):
+                            raise FlavonoidException(8)
+                
+                g.append(c)
+                gix.append(i)
+
+                # remove atoms from the molecule
+                for j in c: mol.getAtom(j).remove()
+                # if no atom is retained, return the matched indices
+                if mol.countAtoms() == 0:
+                    return g, gix
+    
+    return g, gix
+    
+
 def chainGroupMatch(mol, querys):
     """ Find side chains from molecule """
+    matchedix, mgix = [], []
+    if mol.countAtoms()==0:
+        return matchedix, mgix
     # pre-declare local functions and variables
     substructureMatcher = idg.substructureMatcher
     iterateMatches      = substructureMatcher(mol).iterateMatches
     
     # preallocation and initialization
-    n, matchedix, mgix, delatms  = len(querys), [], [], set([])
+    n, delatms  = len(querys), set([])
 
     # get separated side groups
     sdgroups = separategroups(mol)
@@ -2210,7 +3039,7 @@ def chainGroupMatch(mol, querys):
     ismatched = False
     for i in xrange(n):
         q, num, qsml = querys[i]
-        if num>maxm: continue
+        if num>maxm or 'N' in qsml: continue
         
         qatoms  =  [atom for atom in q.iterateAtoms()]
 
@@ -2267,22 +3096,21 @@ def getSidechains(mol, skeleton, skix, ringinfo):
     rmatoms = removeatoms
     n = mol.countAtoms()
     rgix = getRings(mol, checkBenzene = False)
-    skidx, rmrg, brs, rmrgix = set(), set(), [], set()
+    skidx, rmrg, rmrgix = set(), set(), set()
+    nr = len(ringinfo[0])
     for sk in skeleton:
         rmrgix.update(sk[0])
         for i in sk[0]:
             rmrg.update(ringinfo[0][i])
     for skixi in skix: skidx.update(skixi)
-    rgset = [set(ringinfo[0][i]) for i in xrange(len(ringinfo[0])) if i not in rmrgix]
+    rgset = [set(ringinfo[0][i]) for i in xrange(nr) if i not in rmrgix]
     rgset += [set(rg) for rg in rgix if rg not in ringinfo[0]]
     
     # obtain benzene rings
-    for i in ringinfo[1]:
-        if ringinfo[2][ringinfo[1].index(i)] == 'b':
-            brs.append(ringinfo[0][i])
+    brs = [ringinfo[0][i] for i in xrange(nr) if ringinfo[1][i] == 'b']
 
     if len(set(skidx)) == mol.countAtoms():
-        return {'ringGroup':{'atomIndex':[], 'groupName':[]},
+        return {'ringGroup':{'atomIndex':[], 'groupName':[], 'glcIndex': []},
                 'chainGroup':{'atomIndex':[], 'groupName':[]}}, True
 
     if len(rgix) > len(rmrgix):
@@ -2307,13 +3135,19 @@ def getSidechains(mol, skeleton, skix, ringinfo):
         if len(sdbrset) >= 3 and isaromatic(sdbrset):
             g, name = aromaticRingMatch(brs, skidx)
             name[:] = name if name else [None]
-            querysds, qidxs, qnames, nix = checkQueryGroup(rgset, name)
+            querysds, qidxs, qnames, nix = getQueryGroup(rgset, name)
         else:
-            querysds, qidxs, qnames = checkQueryGroup(rgset, [])
+            querysds, qidxs, qnames = getQueryGroup(rgset, [])
 
         rgset2 = rgset[:]
 
         rmatoms(mol, skidx, rgset, (rmrg, brset), True)
+        # match alkaloid groups
+        querysdsN = []
+        for qi in querysds:
+            if 'N' in qi[3]:
+                querysdsN.append(qi)
+        ng, ngix = alkaloidMatch(mol, querysdsN, rgset)
 ##        idgrender.renderToFile(mol,'m2.png')
         mhidx, mhgs = ringGroupMatch(mol, (rgset, brset), querysds, qidxs)
         
@@ -2348,6 +3182,13 @@ def getSidechains(mol, skeleton, skix, ringinfo):
             mhidx += g
             mhgs += nix
 
+        mhidx += ng
+        mhgs += ngix
+
+        # get matched saccharides
+        glcix = [qx[1] for qx in qidxs]
+        mhglc = [i for i in xrange(len(mhgs)) if mhgs[i] in glcix]
+        
         mhrnames = [qnames[i] for i in mhgs]
         mhs = set()
         for mhi in mhidx: mhs.update(mhi)
@@ -2355,53 +3196,81 @@ def getSidechains(mol, skeleton, skix, ringinfo):
         for rg in rgset: rmrg.update(rg)
     else:
         setig = set(skidx)
-        mhidx, mhrnames = [], []
+        mhidx, mhrnames, mhglc = [], [], []
 
-    if mol.countAtoms()>len(setig):
+    if mol.countAtoms()>0:
         rmatoms(mol, setig, [], (rmrg, []), False)
-        querysds, qnames = checkQueryGroup([], [], ckr=False)
-        mhidxc, mhgsc = chainGroupMatch(mol, querysds)
-        # delete groups that have been assigned in other groups
-        if mhidx:
-            delix = []
-            mhrset = [set(g) for g in mhidx]
-            for gi in mhidxc:
-                if any(len(set(gi)&g)==len(gi) for g in mhrset):
-                    delix.append(gi)
-            mhgsc[:] = [mhgsc[i] for i in xrange(len(mhgsc)) if mhidxc[i] not in delix]
-            mhidxc[:] = [g for g in mhidxc if g not in delix]
-        mhcnames = [qnames[i] for i in mhgsc]
+        
+        if mol.countAtoms() > 0:
+            querysds, qnames = getQueryGroup([], [], ckr=False)
+            querysdsN = []
+            for i in xrange(len(querysds)):
+                qi1, qi2, qi3 = querysds[i]
+                if 'N' in qi3:
+                    querysdsN.append((i, qi1, qi2, qi3))
+            ng, ngix = alkaloidMatch(mol, querysdsN, [])
+
+            mhidxc, mhgsc = chainGroupMatch(mol, querysds)
+            # delete groups that have been assigned in other groups
+            if mhidx:
+                delix = []
+                mhrset = [set(g) for g in mhidx]
+                for gi in mhidxc:
+                    if any(len(set(gi)&g)==len(gi) for g in mhrset):
+                        delix.append(gi)
+                nr = len(mhgsc)
+                mhgsc[:]=[mhgsc[i] for i in xrange(nr) if mhidxc[i] not in delix]
+                mhidxc[:]=[g for g in mhidxc if g not in delix]
+            mhgsc += ngix
+            mhidxc += ng
+            mhcnames = [qnames[i] for i in mhgsc]
+        else:
+            mhidxc, mhcnames = [], []
             
     else:
         mhidxc, mhcnames = [], []
 
-    mg = {'ringGroup':  {'atomIndex': mhidx,    'groupName':mhrnames},
+    mg = {'ringGroup':  {'atomIndex': mhidx, 'groupName':mhrnames, 'glcIndex': mhglc},
           'chainGroup': {'atomIndex': mhidxc,   'groupName':mhcnames}}
 
     if mol.countAtoms()>0:
         return mg, False
     
-    return mg, True    
+    return mg, True
 
 
 def getmoleculeInfo(string):
     """ Get information of molecule """
     
     mol = loadmol(string)
+
+    if any(atom.radicalElectrons() for atom in mol.iterateAtoms()):
+        raise FlavonoidException(7)
     
     mol.dearomatize()               # convert aromatic structure to Kekule form
+    if not validnitrogencheck(mol):
+        raise FlavonoidException(8)
+    
     sk, skix, names, ringinfo =  getSkeleton(mol)
     
     if not sk or not names:
-        return None, None, None, None
+        raise FlavonoidException(4)
 
     mg, validsd = getSidechains(mol, sk, skix, ringinfo)
     if not validsd:
-        raise ValueError('Unexcepted side groups or elements exist in flavonoids.')
+        raise FlavonoidException(7)
 
     skgix, sgix = indexsg(sk, skix, mg, ringinfo[0], names)
+    if mg['ringGroup']['glcIndex']:
+        glcs = []
+        for i in mg['ringGroup']['glcIndex']:
+            glcs.append(mg['ringGroup']['atomIndex'][i])
 
-    return sk, skix, names, (mg, skgix, sgix)
+        glcnumering = indexglc(glcs, ringinfo[0])
+    else:
+        glcnumering = []
+
+    return sk, skix, names, (mg, skgix, sgix), glcnumering
 
 
 if __name__=='__main__':
