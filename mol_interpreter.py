@@ -442,8 +442,16 @@ def getRings(mol, checkBenzene = True):
             s = r.clone().smiles().lower()
             s = ''.join(findall("[a-zA-Z]+", s))
             if all(k in 'co' for k in s):
-                ringidx.append([atom.index() for atom in r.iterateAtoms()])
-                ringObjs.append(r)
+                rix = [atom.index() for atom in r.iterateAtoms()]
+                # to avoid internal ring
+                t = True
+                for atmi in r.iterateAtoms():
+                    if sum(ni.index() in rix for ni in atmi.iterateNeighbors())>=3:
+                        t = False
+                        break
+                if t:
+                    ringidx.append(rix)
+                    ringObjs.append(r)
 
         if len(ringidx)<2:  return None, None
 
@@ -2041,8 +2049,7 @@ def indexsg(sk, skix, sg, ringidx, names):
                     j = -1
                     for g in sg[key]['atomIndex']:
                         j += 1
-                        if skt[i] in g or\
-                           any(ni[0] in g and ni[0] not in skt for ni in fneis[skt[i]]):
+                        if skt[i] in g or any(ni[0] in g for ni in fneis[skt[i]]):
                             skgixi.append(ixt[i])
                             sgixi.append((key, j, skt[i]))
 
@@ -2134,7 +2141,6 @@ def getsidenets(sk, skix, sginfo, glcnumbering):
                 s += 'skeletons%s ' %t if len(t)>3 else 'skeleton%s ' %t
 
             for key2 in sgps.keys():
-                if key2 not in sdkey.keys(): continue
                 kx, t, sc = sdkey[key2], '', ''
                 for j in xrange(sdnum[key2]):
                     if not (j==i and key2==key) and sdsets[key][i]&sdneis[key2][j]:
@@ -2208,7 +2214,7 @@ def getsidegroupdist(sk, names, sginfo):
                             sc.insert(xi, si)
                             kix.insert(xi, ik)
             else:
-                gpname, namepre = sgps[gk]['groupName'][ik], ''
+                gpname = sgps[gk]['groupName'][ik]
                 if 'ring' in gk:
                     for ix in sgps[gk]['atomIndex'][ik]:
                         if any(ni[0] == gmi for ni in fneis[ix]):
@@ -2216,14 +2222,12 @@ def getsidegroupdist(sk, names, sginfo):
                                 namepre = 'O-' if fatoms[ix][1]=='o' else 'C-'
                             elif fatoms[ix][1]=='o':
                                 namepre = 'O-'
-                            
-                            if namepre:
-                                gpname = '%s%s'%(namepre,gpname)
+                            gpname = '%s%s'%(namepre,gpname)
                             break
                 si = "%s-%s (%d)"%(skgix[i][j], gpname, ik)
                 sc.append(si)
         if sc:
-            s += 'skeleton %d (%s): '%(i+1, names[i]) + '; '.join(sc) + '\n'
+            s += 'skeleton %d (%s): '%(i+1, names[i]) + '; '.join(sc)
     return s
 
 
