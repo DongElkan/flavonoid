@@ -2049,7 +2049,7 @@ def indexsg(sk, skix, sg, ringidx, names):
                     j = -1
                     for g in sg[key]['atomIndex']:
                         j += 1
-                        if skt[i] in g or any(ni[0] in g for ni in fneis[skt[i]]):
+                        if skt[i] in g or any(ni[0] in g and ni[0] not in skt for ni in fneis[skt[i]]):
                             skgixi.append(ixt[i])
                             sgixi.append((key, j, skt[i]))
 
