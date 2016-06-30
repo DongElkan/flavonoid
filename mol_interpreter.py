@@ -656,6 +656,8 @@ def classFlav(ringidx, sk, aromaticName):
                 return 'flavan-3,4-diol' if b5==1 else 'flavan-4-ol'
             elif bc4 and bc6:
                 return 'anthocyanidin'
+            elif bc4:
+                return 'flav-3-ene'
             elif allb1:
                 return 'flavan-3-ol' if b5==1 else 'flavan'
         
