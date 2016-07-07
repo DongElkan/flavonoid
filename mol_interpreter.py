@@ -3277,9 +3277,3 @@ def getmoleculeInfo(string):
         glcnumering = []
 
     return sk, skix, names, (mg, skgix, sgix), glcnumering
-
-
-if __name__=='__main__':
-    s = 'C1C(OC2=C(C1=O)C=CC(=C2)OC3C(C(C(C(O3)CO)O)O)O)C4=CC=CC=C4'
-    sk, name, mg, sg = getmoleculeInfo(s)
-    print "skeleton:", sk, '\nname:', name, '\nside chains:', mg
