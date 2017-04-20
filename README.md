@@ -1,6 +1,6 @@
 "flavonoid" is a pure Python module used to identify the class of flavonoids according to the input molecular identifiers and facilitate the interpretation of mass spectra derived from the molecules, with the help of indigo toolkit.
 
-#**Usage**
+**Usage**
     
     from flavonoid import Flavonoids
     fv = Flavonoids(s)
@@ -30,20 +30,20 @@ Once the side group is added to the library, classifying flavonoid and matching 
 	
 In addition, basic properties such as molecular weight, exact molecular weight, formula can also be obtained, and the image can be generated.
 
-#**Classes of flavonoids**
-The classes of flavonoids are summarized in **flavonoids_skeleton.pdf** provided current package. The name of each class is collected from [2], [3] and references in the ..pdf file. If the input molecular identifier is not matched with the skeleton of defined class, `None` will be output. Therefore, some special flavonoids like *Mbamichalcone* can not be identified.
+**Classes of flavonoids**
+The classes of flavonoids are summarized in **flavonoids_skeleton.pdf** provided in current package. The name of each class is collected from [2], [3] and references in the ..pdf file. If the input molecular identifier is not matched with the skeleton of defined class, `None` will be output. Therefore, some special flavonoids like *Mbamichalcone* can not be identified.
 
-#**Prerequisites**
+**Prerequisites**
 Python 2.7
 
 * This module is not tested on Python 3. If Python 3 is installed to run the module, *2to3* can be adopted to transform the modules *mol_interpreter*, *sidechain_props* and *flavonoid* into valid Python 3 program.
 
-#**Contact**
+**Contact**
 Nai-ping Dong
 
 naiping.dong@hotmail.com
 
-#**References**
+**References**  
 [1] Rauter AP. [Nomenclature of Flavonoids (IUPAC Provisional Recommendations)](http://iupac.org/recommendation/nomenclature-of-flavonoids/).
 
 [2] Harborne JB, Baxter H. The Handbook of Natural Flavonoids (2 Volume Set). Wiley, 1999.
