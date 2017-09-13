@@ -49,51 +49,74 @@ class Flavonoids(object):
 
         mol = validflavonoid(string)
 
-        sk, skix, names, sginfo, glcnum = mi.getmoleculeInfo(string)
+        sk, skix, names, sginfo, skorderinfo = mi.getmoleculeInfo(string)
         if not sk:
-            raise ValueError('This is not a flavonoid.')
+            raise FlavonoidException(4)
 
-        self.molecule = mol
-        self.identifier = string
-        self.skinfo = (sk, skix, names)
-        self.sginfo = sginfo
-        self.glcnumbering = glcnum
+        self.__molecule = mol
+        self.__identifier = string
+        self.__skinfo = (sk, skix)
+        self.__names = names
+        self.__sginfo = sginfo[:-1]
+        self.__glcnumbering = sginfo[-1]
 
     def getcanonicalSmiles(self):
         """ canonical SMILES """
-        return self.molecule.canonicalSmiles()
+        return self.__molecule.canonicalSmiles()
 
     def className(self):
         """ class name of the flavonoid """
-        return getnames(self.skinfo[2])
+        return getnames(self.__names)
     
     def exactMass(self):
         """ exact mass of input molecule """
-        return self.molecule.monoisotopicMass()
+        return self.__molecule.monoisotopicMass()
 
     def mass(self):
         """ average mass """
-        return self.molecule.molecularWeight()
+        return self.__molecule.molecularWeight()
 
     def formula(self):
         """ formula of the molecule """
-        return ''.join(self.molecule.grossFormula().split())
+        return ''.join(self.__molecule.grossFormula().split())
 
     def getInchi(self):
         """ get InChI """
-        return getinchi(self.identifier)
+        return getinchi(self.__identifier)
 
     def getallSidegroups(self):
         """ get all side groups """
-        print getsidenets(self.skinfo[0], self.skinfo[1], self.sginfo, self.glcnumbering)
+        s = 'Due to complex structure of the skeleton, the indexing ' +\
+            'of side groups is ignored, only all side group nanes ' +\
+            'are printed. For the classes that ignore this, please ' +\
+            'see attribute "idxNameExceptions".'
+        names = [self.__names] if isinstance(self.__names, str) else self.__names
+        if any(name in mi.name_exceptions for name in names):
+            print getsidenets(self.__skinfo[0], self.__skinfo[1],
+                              self.__sginfo, self.__glcnumbering)
+            sys.stderr.write('Warning: %s'%s)
+            return None
+            
+        print getsidenets(self.__skinfo[0], self.__skinfo[1],
+                          self.__sginfo, self.__glcnumbering)
 
     def getSidegroups(self):
         """ get side groups around the skeleton """
-        print getsidegroupdist(self.skinfo[0], self.skinfo[2], self.sginfo)
+        s = 'Due to complex structure of the skeleton, the indexing ' +\
+            'of side groups is ignored, only all side group nanes ' +\
+            'are printed. For the classes that ignore this, please ' +\
+            'see attribute "idxNameExceptions".'
+        names = [self.__names] if isinstance(self.__names, str) else self.__names
+        if any(name in mi.name_exceptions for name in names):
+            print getsidegroupdist(self.__skinfo[0], names, self.__sginfo)
+            sys.stderr.write('Warning: %s'%s)
+            return None
+        
+        print getsidegroupdist(self.__skinfo[0], self.__names, self.__sginfo)
 
     def generateImage(self, filename):
         """ Generate image of current molecule """
-        generatemolimage(self.identifier, filename)
+        generatemolimage(self.__identifier, filename)
 
     def generateSidegroups(self, path=None):
         """ generate all side groups """
@@ -115,6 +138,12 @@ class Flavonoids(object):
                 generatemolimage(g['smiles'],'%s.png'%g['name'])
 
         os.chdir(cwd)
+
+    def idxNameExceptions(self):
+        """ Name exceptions in performing indexing of side groups """
+        s = 'Currently, indexing of side groups for the following ' +\
+            'classes are not considered: \n'
+        print s + '\t' + ';\n\t'.join(mi.name_exceptions)
 
     def addsidegroup(self, name, smiles):
         """ add side groups to current side group library """

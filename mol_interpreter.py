@@ -13,21 +13,22 @@ AUTHOR
 Naiping Dong
 
 EMAIL
-np.dong572@gmail.com
+naiping.dong@hotmail.com
 """
 
-import os, json
+import os, json, sys
 from re import findall
-from itertools import combinations
-from indigo import Indigo, IndigoException
+from indigo import Indigo
 from indigo_inchi import IndigoInchi
 from indigo_renderer import IndigoRenderer as renderer
 
 idg         = Indigo()
 idgin       = IndigoInchi(idg)
 idgrender   = renderer(idg)
-
 CHAIN = idg.CHAIN
+
+# exception names that will not perform indexing
+name_exceptions = ['theaflavin', 'biflavonoid', 'stilbeno-flavonoid']
 
 with open('sidechain.json','r') as f:
     sideChains = json.load(f)
@@ -56,7 +57,7 @@ class FlavonoidException(Exception):
         elif self.id==8:
             return 'Unexpected side group including nitrogens in a flavonoid.'
         elif self.id==9:
-            return 'Too condensed distribution of benzene rings which unlikely appears as a flavonoid.'
+            return 'Too condensed distribution of benzene rings which unlikely appears as a flavonoid.'            
 
 
 
@@ -324,8 +325,7 @@ def benzeneRingID(ringObjs, ringIdx):
 
     brc = []
     for i in xrange(nrg):
-        brc.append(all(j=='c' for j in rsmiles[i]) or
-                   rsmiles[i].count('C')==ringObjs[i].countAtoms())
+        brc.append(rsmiles[i].lower().count('c')==ringObjs[i].countAtoms())
     
     for i in xrange(nrg):
 
@@ -822,6 +822,78 @@ def checkBiflavonoidSK(ringidx, brix, ringA):
     return sk, None
 
 
+def checkTheaflavinSK(sk, ringidx, brid, ringA, ring7, names):
+    """
+    Check whether it is the skeleton of a theaflavin
+    ringA.append([i, j, k, nei[0], bo[0]])
+    """
+    # pre-declaration
+    iters = miters
+    fneis, fatoms = neis, atoms
+
+    setrg, nr = [set(r) for r in ringidx], len(ringidx)
+
+    # get rings containing 7 atoms with aromatic structures
+    br7 = []
+    for r in ring7:
+        
+        if all(nei[1]==4 for i in r for nei in fneis[i] if nei[0] in r):
+            br7.append(set(r))
+        else:
+            k = 0
+            for i in r:
+                k += sum([nei[1]==2 and nei[0] in r for nei in fneis[i]])
+            if k == 6:
+                br7.append(set(r))
+
+    if not br7: return sk, names
+    
+    # get ring A of Chromone that bonds to benzyl ring 7
+    tx = []
+    for i in xrange(len(names)):
+        if names[i] != 'flavan-3-ol': continue
+        for rA in ringA:
+            j, t = rA[0], rA[1:]
+            
+            if j in sk[i][0]: continue
+            
+            # get ring C of the other flavan-3-ol like structure
+            tag = False
+            for k in xrange(nr):
+                if setrg[k].issuperset(t) and len(setrg[j]&setrg[k])==2:
+                    tag = True
+                    break
+            if not tag: continue
+
+            # get ring B of br7
+            tag = False
+            for a, r in iters(ringidx[k], br7):
+                b = [nei[0] for nei in fneis[a] if nei[0] in r and nei[-1]==CHAIN]
+                if b:
+                    b, tag = b[0], True
+                    break
+            if not tag: continue
+
+            # check the identified ring B, it must be adjacent to ring
+            # B of the skeleton i
+            if len(r&setrg[sk[i][0][-1]]) != 2: continue
+
+            # insert the identified structure to the flavan-3-ol skeleton
+            ij = br7.index(r)
+            sk[i][0] += [j, k, ij+nr]
+            sk[i][:-1] += [t[0],t[1],a,b,t[2],t[3]]
+            sk[i][-1] = 'tf'
+            tx.append(i)
+
+    # if only one skeleton is found, return anyway, or no theaflavin
+    # is found, return
+    if not tx: return sk, names
+    
+    # return idenfied theaflavin and ignore other skeletons since
+    # in theaflavin unlikely exist other flavonoid skeletons
+    return [sk[i] for i in tx], 'theaflavin'
+
+
 def checkFlavSK(ringidx, aromaticName, ringA, ring7):
     """
     Check whether it is the skeleton of a flavonoid,  flavonolignan or
@@ -850,6 +922,7 @@ def checkFlavSK(ringidx, aromaticName, ringA, ring7):
     iters = miters
     fneis, fatoms = neis, atoms
 
+    # set up structure for storing information of rings and ring C
     nr = len(ringidx)
     brix = [i for i in xrange(nr) if aromaticName[i]]
     setrg, lr, clr, rno, i = [], [], [], [], -1
@@ -858,9 +931,10 @@ def checkFlavSK(ringidx, aromaticName, ringA, ring7):
         setrg.append(set(ix))
         lr.append(len(ix))
         rno.append(len([j for j in ix if fatoms[j][1]=='o']))
-        if lr[-1]==6 and rno[-1]==1:
+        if len(ix)==6 and rno[-1]==1:
             clr.append(i)
 
+    # if no ring C is found, this is not a flavonoid, return empty list
     if not clr:
         return [], []
 
@@ -933,9 +1007,9 @@ def checkFlavSK(ringidx, aromaticName, ringA, ring7):
     # are possibly coumestans, pterocarpans or peltogynoid;
     # and check whether there exists a ring among ring C and ring B;
     # remove structures that can not be assigned by known class name;
-    # if the chain in flavonoids (i.e., bond between ring B and C) is one of
-    # the edges of another ring but the flavonoid is also not known class
-    # having four rings, remove it.
+    # if the chain in a flavonoid (i.e., the bond between ring B and C) is
+    # one of the edges of another ring but the flavonoid is also not a
+    # known class having four rings, remove it.
     if ring7:
         setrg2 = setrg+[set(rg) for rg in ring7]
         ridx2 = ringidx+ring7
@@ -1181,8 +1255,8 @@ def checkChalSK(ringidx, aromaticName):
                 nameid = ''
 
                 # for these types of flavonoids except aurone and,
-                # dihydroaurone no any atom in the chain between two
-                # benzenes exists in other rings.
+                # dihydroaurone, no any atom in the chain between the
+                # two benzenes exists in other rings.
                 tps, t  = [i1, ni2[0], j1], True
                 for k in tps:
                     if any(ni[4]!=CHAIN for ni in fneis[k]):
@@ -1763,7 +1837,7 @@ def getSkeleton(mol):
         else:
             if t: return None, None, None, None
 
-    if 'bzix' not in locals():
+    if 'brid' not in locals():
         brid = aromaticName
 
     ringA = getRingA(ringidx,brid)
@@ -1777,9 +1851,14 @@ def getSkeleton(mol):
         if not any(set(r7ix).issuperset(rg) for rg in ringidx):
             ring7.append(r7ix)
     brid7 = [None]*len(ring7)
-        
+
+    # combine rings with 7 elements
+    ringidx2, brid2 = ringidx+ring7, brid+brid7
+
+    # flavonoid and its derivatives
     flavsk, name = checkFlavSK(ringidx, brid, ringA, ring7)
     if flavsk:
+        # stilbeno-flavonoid
         flavsk, name = checkStilbenoSK(ringidx, benzenes, flavsk, name)
         sk[:] = [flavsk[i] for i in xrange(len(flavsk)) if name[i]]
         names[:] = [name[i] for i in xrange(len(flavsk)) if name[i]]
@@ -1799,15 +1878,21 @@ def getSkeleton(mol):
                 skix = getskidx(ringidx, sk)
                 return sk, skix, names, (ringidx, aromaticName)
 
+        # Theaflavin
+        if ring7 and 'flavan-3-ol' in names:
+            sk, name = checkTheaflavinSK(sk, ringidx, brid, ringA, ring7, names)
+            if isinstance(name, str):
+                skix = getskidx(ringidx2, sk)
+                return sk, skix, name, (ringidx2, aromaticName+brid7)
+
     # chalcone
-    ringidx2, brid2 = ringidx+ring7, brid+brid7
     csk, cname, cskid = checkChalSK(ringidx, brid)
     if csk:
         ncsk = len(csk)
         if ncsk>1 or (sk and ncsk):
             csk, cname = checkChalpolymer(csk, cskid, cname, sk, ringidx2)
         sk = sk+csk
-        names = names+cname
+        names += cname
     sk, names = checkDARflav(ringidx2, brid2, ringA, sk, names)
     if sk:
         retains = checkValidSKs(ringidx, sk, names)
@@ -1879,15 +1964,14 @@ def indexglc(glcrings, ringidx):
         while True:
             flag = True
             for i in cix:
-                if i not in glcixi:
-                    if any(ni[0]==glcixi[-1] for ni in fnei[i]):
-                        glcixi.append(i)
-                        flag = False
-                        break
+                if i not in glcixi and any(ni[0]==glcixi[-1] for ni in fnei[i]):
+                    glcixi.append(i)
+                    flag = False
+                    break
 
             if flag:
                 break
-        glcix.append(glcixi[:])
+        glcix.append(glcixi)
 
     return glcix
 
@@ -1936,7 +2020,7 @@ def indexsg(sk, skix, sg, ringidx, names):
     """ indexing side chains """
     fneis = neis
 
-    skgix, sgix = [], []
+    skgix, sgix, skatoms, skatomorder = [], [], [], []
     
     setrg, lr, lsk = [set(rg) for rg in ringidx], [len(rg) for rg in ringidx], len(sk)
 
@@ -1948,8 +2032,8 @@ def indexsg(sk, skix, sg, ringidx, names):
         return skgix, sgix
     
     exs = ['coumestan', 'pterocarpan', 'dihydropterocarpan']
-    skt, ixt, sgsi = [], [], []
     for ii in xrange(lsk):
+        skt, ixt, sgsi, ixx = [], [], [], []
         ski = sk[ii]
         
         sgsi[:] = sgs[:]
@@ -1974,16 +2058,19 @@ def indexsg(sk, skix, sg, ringidx, names):
             rgt = indexring(ringidx[i][:], [i0,i1,c[0]], [], 'a')
             skt += rgt
             ixt += [str(i) for i in xrange(lr[k]-1,lr[k]+3)]+[None, None]
+            ixx += [i for i in xrange(lr[k]-1, lr[k]+3)]+[9,10]
 
             # ring C
             rgt = indexring(ringidx[k][:], [i0,i1,o], [], 'c')
             skt += rgt
             ixt += [str(i+1) for i in xrange(lr[k]-2)]+[None, None]
+            ixx += [i+1 for i in xrange(lr[k]-2)]+[5,6]
 
             # ring B
             rgt = indexring(ringidx[j][:], [None,None,j0], sgsi, 'b')
             skt += rgt
             ixt += [str(i+1)+"'" for i in xrange(lr[j])]
+            ixx += [i+1 for i in xrange(lr[j])]
             
         elif l == 2:
 
@@ -1993,12 +2080,14 @@ def indexsg(sk, skix, sg, ringidx, names):
             rgt = indexring(ringidx[i][:], [None,None,ski[1]], sgsi, 'b')
             skt += rgt
             ixt += [str(i+1)+"'" for i in xrange(lr[i])]
+            ixx += [i+1 for i in xrange(lr[i])]
 
             # ring C
             j0 = [k for k in ski[1:] if k in ringidx[j]][0]
             rgt = indexring(ringidx[j][:], [None,None,j0], sgsi, 'b')
             skt += rgt
             ixt += [str(i+1) for i in xrange(lr[j])]
+            ixx += [i+1 for i in xrange(lr[j])]
 
         elif l == 4:            # pterocarpan and coumestan
 
@@ -2026,6 +2115,7 @@ def indexsg(sk, skix, sg, ringidx, names):
                         break
             skt += ixs
             ixt += [str(i+1) for i in xrange(len(ixs))]
+            ixx += [i+1 for i in xrange(len(ixs))]
 
         else:                   # xanthones
 
@@ -2044,6 +2134,10 @@ def indexsg(sk, skix, sg, ringidx, names):
 
             skt += rg
             ixt += [str(i+1) for i in xrange(len(rg))]
+            ixx += [i+1 for i in xrange(len(rg))]
+
+        skatoms.append(skt)
+        skatomorder.append(ixx)
 
         for i in xrange(len(skt)):
             if ixt[i]:
@@ -2064,14 +2158,12 @@ def indexsg(sk, skix, sg, ringidx, names):
         skgix.append(skgixi)
         sgix.append(sgixi)
 
-        skt[:], ixt[:], sgsi[:] = [], [], []
-
-    return skgix, sgix
+    return skgix, sgix, (skatoms, skatomorder)
  
 
 """
 Get the side chains of current molecule. List of side chains can be found in
-side_chain module. So if new side chains are found, it can be added to the end
+side_chain module. If new side chains are found, it can be added to the end
 of the list.
 
 Note:
@@ -2106,7 +2198,27 @@ def getsidenets(sk, skix, sginfo, glcnumbering):
     """ get networks of side groups """
     sgps, skgix, sgix = sginfo
     fneis = neis
-    if not sgix: return 'There is not any side group around the skeleton.\n'
+    if not sgix:
+        if not sgps:
+            return 'There is not any side group around the skeleton.\n'
+        # if the class is exceptional, statistics of side groups are printed only.
+        else:
+            sx = ''
+            for key in sgps.keys():
+                gname = sgps[key]['groupName']
+                if not sgps[key]['groupName']: continue
+                sx += 'Chain groups include: ' if 'chain' in key \
+                      else 'Ring groups include: '
+                unique_gname = set(sgps[key]['groupName'])
+                kx = []
+                for name in unique_gname:
+                    nn = sum(name==x for x in sgps[key]['groupName'])
+                    kx.append('%d %s groups'%(nn, name))
+                sx += ','.join(kx)
+                sx += '.\n'
+            if not sx:
+                return 'There is not any side group around the skeleton.\n'
+            return sx.rstrip()
 
     lsk, skixset = len(sk), [set(ix) for ix in skix]
     glcix = sginfo[0]['ringGroup']['glcIndex']
@@ -2188,7 +2300,26 @@ def getsidenets(sk, skix, sginfo, glcnumbering):
 def getsidegroupdist(sk, names, sginfo):
     """ get distributions of side groups around skeleton """
     sgps, skgix, sgix = sginfo
-    if not sgix: return 'There is not any side group around the skeleton.\n'
+    if not sgix:
+        if not sgps:
+            return 'There is not any side group around the skeleton.\n'
+        # if the class is exceptional, statistics of side groups are printed.
+        else:
+            sx = ''
+            for key in sgps.keys():
+                gname = sgps[key]['groupName']
+                if not sgps[key]['groupName']: continue
+                sx += 'Chain groups are: ' if 'chain' in key else 'Ring groups are: '
+                unique_gname = set(sgps[key]['groupName'])
+                kx = []
+                for name in unique_gname:
+                    nn = sum(name==x for x in sgps[key]['groupName'])
+                    kx.append('%d %s groups'%(nn, name))
+                sx += ','.join(kx)
+                sx += '.\n'
+            if not sx:
+                return 'There is not any side group around the skeleton.\n'
+            return sx.rstrip()
 
     fatoms, fneis = atoms, neis
     
@@ -2631,13 +2762,14 @@ def glycosideMatch(mol, querys, qidxs, rgset, sdset):
     loadMolecule        = idg.loadMolecule
     iis = [qi[1] for qi in qidxs]
     hasChiral = mol.isChiral()
+    # indices of last query group in all groups that have same number of atoms
     terminix = []
     for i in set([qi[-1] for qi in querys]):
         terminix.append([qi[0] for qi in querys if qi[-1]==i][-1])
-    idgrender.renderToFile(mol,'m2.png')
+    #idgrender.renderToFile(mol,'m2.png')
     
     # match groups
-    rmrg, delatms, atmc, atmic, cg, cgix, lp = set(), set(), [], [], [], [], 0
+    rmrg, delatms, cg, cgix, lp, chiralTag = set(), set(), [], [], 0, []
     for qc in querys:
         i, _, q, qsml, _, num = qc
         ij = iis.index(i)
@@ -2645,8 +2777,7 @@ def glycosideMatch(mol, querys, qidxs, rgset, sdset):
         qams  =  [atom for atom in q.iterateAtoms()]
         qamix = [atm.index() for atm in qams]
         for j in xrange(len(qidxs[ij][0])+1):
-            atmc[:] = qams[:]
-            atmic[:] = qamix[:]
+            atmc, atmic = list(qams), list(qamix)
             # further checking by delete an atom around the ring
             q2 = loadMolecule(qsml)
             if j:
@@ -2678,6 +2809,7 @@ def glycosideMatch(mol, querys, qidxs, rgset, sdset):
                                or not j:
                                 cg.append(mhc)
                                 cgix.append(i)
+                                chiralTag.append(q.isChiral())
                                 lp, t = num, True
 
                 if t and j: break
@@ -2686,34 +2818,44 @@ def glycosideMatch(mol, querys, qidxs, rgset, sdset):
         # to select possibly correct matches, following criteria are
         # applied:
         # 1. match obtaining maximum atoms is retained;
-        # 2. if several maximums are found, lowest index in 'gix' is retained.
+        # 2. if several maximums are found:
+        # .... matches having chiral strucutre are preferential,
+        # .... then, lowest index in 'gix' is retained.
         if cg and i in terminix:
             lg = [len(gi) for gi in cg]
             selix = []
             for rg in rgset:
-                ixs = []
-                for j in xrange(len(cg)):
+                ixs, ncg = [], len(cg)
+                for j in xrange(ncg):
                     if rg.issubset(cg[j]):
                         ixs.append(j)
+
+                nc = len(ixs)
+                if nc == 0: continue
+
+                # add current ring into the set which contains all
+                # atoms should be removed in next iteration of query
+                # group match.
+                rmrg.update(rg)
                 
-                if len(ixs)==1:
+                if nc==1:
                     selix.append(ixs[0])
-                    rmrg.update(rg)
-                    continue
-                elif not ixs:
                     continue
 
+                # check whether any query group has chiral structure,
+                # if yes, retain the structure
+                ix2 = [j for j in ixs if chiralTag[j]]
+                if ix2: ixs = ix2
+
+                # if multiple structure matched with same length
+                # minimum query group index is adopted
                 ml = max(lg[j] for j in ixs)
                 ix2 = [j for j in ixs if lg[j]==ml]
                 if len(ix2)>1:
-                    # if multiple structure matched with same length
-                    # minimum query group index is adopted
                     gix2 = [cgix[j] for j in ix2]
                     selix.append(ix2[gix2.index(min(gix2))])
                 else:
                     selix.append(ix2[0])
-
-                rmrg.update(rg)
 
             g += [cg[j] for j in selix]
             gix += [cgix[j] for j in selix]
@@ -2743,8 +2885,7 @@ def glycosideMatch(mol, querys, qidxs, rgset, sdset):
                 if not t:
                     return g, gix
             
-            cg[:] = []
-            cgix[:] = []
+            cg, cgix, chiralTag = [], [], []
 
     return g, gix
 
@@ -2790,7 +2931,6 @@ def ringGroupMatch(mol, rgsets, querys, qidxs):
     if not rgset:
         return matchedix, mgix
     msd, nl = max(len(sdi) for sdi in sdset), len(sdset)
-##    idgrender.renderToFile(mol,'m2.png')
 
     # match groups
     rmrg, delatms, delrg, ismatched = set(), set(), [], False
@@ -2920,7 +3060,6 @@ def ringGroupMatch(mol, rgsets, querys, qidxs):
         if nm==0:
             break
 
-##    idgrender.renderToFile(mol,'m2.png')
     return matchedix, mgix
 
 
@@ -3034,7 +3173,7 @@ def chainGroupMatch(mol, querys):
     iterateMatches      = substructureMatcher(mol).iterateMatches
     
     # preallocation and initialization
-    n, delatms  = len(querys), set([])
+    n, delatms  = len(querys), set()
 
     # get separated side groups
     sdgroups = separategroups(mol)
@@ -3145,7 +3284,7 @@ def getSidechains(mol, skeleton, skix, ringinfo):
         else:
             querysds, qidxs, qnames = getQueryGroup(rgset, [])
 
-        rgset2 = rgset[:]
+        rgset2 = list(rgset)
 
         rmatoms(mol, skidx, rgset, (rmrg, brset), True)
         # match alkaloid groups
@@ -3256,17 +3395,25 @@ def getmoleculeInfo(string):
     mol.dearomatize()               # convert aromatic structure to Kekule form
     if not validnitrogencheck(mol):
         raise FlavonoidException(8)
-    
+
+    # get main skeleton
     sk, skix, names, ringinfo =  getSkeleton(mol)
-    
+
     if not sk or not names:
         raise FlavonoidException(4)
 
+    # get side chains
     mg, validsd = getSidechains(mol, sk, skix, ringinfo)
     if not validsd:
         raise FlavonoidException(7)
 
-    skgix, sgix = indexsg(sk, skix, mg, ringinfo[0], names)
+    # indexing skeletons and glycon rings, however, if the skeleton
+    # belongs to some exceptions, skip this
+    if (isinstance(names, str) and names in name_exceptions) or\
+       any(name in name_exceptions for name in names):
+        return sk, skix, names, (mg, [], []), []
+    
+    skgix, sgix, skorderinfo = indexsg(sk, skix, mg, ringinfo[0], names)
     if mg['ringGroup']['glcIndex']:
         glcs = []
         for i in mg['ringGroup']['glcIndex']:
@@ -3276,4 +3423,10 @@ def getmoleculeInfo(string):
     else:
         glcnumering = []
 
-    return sk, skix, names, (mg, skgix, sgix), glcnumering
+    return sk, skix, names, (mg, skgix, sgix, glcnumering), skorderinfo
+
+
+if __name__=='__main__':
+    s = 'C1C(OC2=C(C1=O)C=CC(=C2)OC3C(C(C(C(O3)CO)O)O)O)C4=CC=CC=C4'
+    sk, name, mg, sg = getmoleculeInfo(s)
+    print "skeleton:", sk, '\nname:', name, '\nside chains:', mg
