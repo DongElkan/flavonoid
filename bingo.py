@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2010-2013 GGA Software Services LLC
+# Copyright (C) 2009-2015 EPAM Systems
 #
 # This file is part of Indigo toolkit.
 #
@@ -21,7 +21,10 @@ class BingoException(Exception):
         self.value = value
 
     def __str__(self):
-        return repr(self.value.decode('ascii')) if sys.version_info > (3, 0) else repr(self.value)
+        if sys.version_info > (3, 0):
+            return repr(self.value.decode('ascii'))  
+        else:
+            return repr(self.value)
 
 
 class Bingo(object):
@@ -53,6 +56,8 @@ class Bingo(object):
         self._lib.bingoSearchMolFormula.argtypes = [c_int, c_char_p, c_char_p]
         self._lib.bingoSearchSim.restype = c_int
         self._lib.bingoSearchSim.argtypes = [c_int, c_int, c_float, c_float, c_char_p]
+        self._lib.bingoEnumerateId.restype = c_int
+        self._lib.bingoEnumerateId.argtypes = [c_int]
         self._lib.bingoNext.restype = c_int
         self._lib.bingoNext.argtypes = [c_int]
         self._lib.bingoGetCurrentId.restype = c_int
@@ -96,13 +101,16 @@ class Bingo(object):
     @staticmethod
     def _checkResultString (indigo, result):
         res = Bingo._checkResultPtr(indigo, result)
-        return res.decode('ascii') if sys.version_info >= (3, 0) else res.encode('ascii')
+        if sys.version_info >= (3, 0):
+            return res.decode('ascii')  
+        else:
+            return res.encode('ascii')
 
     @staticmethod
     def _getLib(indigo):
-        if os.name == 'posix' and not platform.mac_ver()[0]:
+        if os.name == 'posix' and not platform.mac_ver()[0] and not platform.system().startswith("CYGWIN"):
             _lib = CDLL(indigo.dllpath + "/libbingo.so")
-        elif os.name == 'nt':
+        elif os.name == 'nt' or platform.system().startswith("CYGWIN"):
             _lib = CDLL(indigo.dllpath + "/bingo.dll")
         elif platform.mac_ver()[0]:
             _lib = CDLL(indigo.dllpath + "/libbingo.dylib")
@@ -168,6 +176,12 @@ class Bingo(object):
             Bingo._checkResult(self._indigo, self._lib.bingoSearchSim(self._id, query.id, minSim, maxSim, metric.encode('ascii'))),
             self._indigo, self)
 
+    def enumerateId(self):
+        self._indigo._setSessionId()
+        e = self._lib.bingoEnumerateId(self._id)
+        result = Bingo._checkResult(self._indigo, e)
+        return BingoObject(result, self._indigo, self)
+
     def searchMolFormula(self, query, options=''):
         self._indigo._setSessionId()
         if not options:
@@ -188,7 +202,7 @@ class BingoObject(object):
         self._id = objId
         self._indigo = indigo
         self._bingo = bingo
-
+        
     def __del__(self):
         self.close()
 
@@ -200,7 +214,7 @@ class BingoObject(object):
 
     def next(self):
         self._indigo._setSessionId()
-        return True if Bingo._checkResult(self._indigo, self._bingo._lib.bingoNext(self._id)) == 1 else False
+        return (Bingo._checkResult(self._indigo, self._bingo._lib.bingoNext(self._id)) == 1)
 
     def getCurrentId(self):
         self._indigo._setSessionId()
