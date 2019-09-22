@@ -32,35 +32,35 @@ class FlavonoidException(Exception):
 
     def __str__(self):
         if self.id == 1:
-            return ('Multiple components are unsupported in ' +
-                    'identifying flavonoids.')
+            return " ".join(["Multiple components are unsupported in",
+                             "identifying flavonoids."])
         elif self.id == 2:
-            return ('Elements except CHNOS are not allowed as a ' +
-                    'candidate of flavonoid.')
+            return " ".join(["Elements except CHNOS are not allowed as a",
+                             "candidate of flavonoid."])
         elif self.id == 3:
-            return 'Group matching times out.'
+            return "Group matching times out."
         elif self.id == 4:
-            return 'This is not a flavonoid.'
+            return "This is not a flavonoid."
         elif self.id == 5:
-            return 'Can not load molecule from the input identifier by Indigo.'
+            return "Can not load molecule from the input identifier by Indigo."
         elif self.id == 6:
-            return ('Charged atoms except oxygen or charges except +1 ' +
-                    'are not allowed as a candidate of flavonoid.')
+            return " ".join(["Charged atoms except oxygen or charges except",
+                             "+1 are not allowed as a flavonoid."])
         elif self.id == 7:
-            return ('Unexcepted side groups, elements or radical ' +
-                    'atoms exist in flavonoids.')
+            return " ".join(["Unexcepted side groups, elements or radical",
+                             "atoms exist in flavonoids."])
         elif self.id == 8:
-            return ('Unexpected side group including nitrogens in ' +
-                    'a flavonoid.')
+            return " ".join(["Unexpected side group including nitrogens in",
+                             "a flavonoid."])
         elif self.id == 9:
-            return ('Too condensed distribution of benzene rings ' +
-                    'which unlikely appears as a flavonoid.')
+            return " ".join(["Too condensed distribution of benzene rings",
+                             "which unlikely appears as a flavonoid."])
         elif self.id == 10:
-            return ('Not sufficient rings are found as a flavonoid ' +
-                    'candidate.')
+            return " ".join(["Not sufficient rings are found as a flavonoid"
+                             "candidate."])
         elif self.id == 11:
-            return ('Multiple oxygens bonding to the same atom ' +
-                    'in a ring is unacceptable as a flavonoid')
+            return " ".join(["Multiple oxygens bonding to the same atom"
+                             "in a ring is unacceptable as a flavonoid."])
 
 
 def loadmol(identifier):
@@ -68,7 +68,7 @@ def loadmol(identifier):
     Load molecule using the identifier to construct an Indigo object.
     """
     # It's a molecular formatted file, only ..mol and ..sdf are accepted.
-    if identifier.endswith('.mol') or identifier.endswith('.sdf'):
+    if identifier.endswith(".mol") or identifier.endswith(".sdf"):
         try:
             mol = idg.loadMoleculeFromFile(identifier)
         except IndigoException:
@@ -164,8 +164,6 @@ class MoleculeParser(object):
         """
         for rgix, rgobj in self.benzylrings.items():
             rsmile = rgobj.smiles
-            if rsmile.lower().count('c') != len(rgix):
-                continue
             # For a candidate benzene ring, at least one neighbor not in
             # the same ring is C
             if not any(any(nei.symbol == "c" and nei.index not in rgix
@@ -173,13 +171,14 @@ class MoleculeParser(object):
                        for j in rgix):
                 continue
 
+            label, supports = None, None
             # benzene ring
-            nc, db = rsmile.count("C"), rsmile.count("=")
-            if rsmile.count("c") == 6 or (db == 3 and nc == 6):
-                rgobj = rgobj._replace(label="b")
+            n, db = len(rgobj.index), rsmile.count("=")
+            if n == 6 or (db == 3 and n == 6):
+                label = "b"
             # check whether the ring is a benzene if it is surrounded by other
             # benzene rings
-            elif nc == 6 and db >= 1:
+            elif n == 6 and db >= 1:
 
                 cbs = []
                 for rgixk, rgobjk in self.benzylrings.items():
@@ -187,13 +186,13 @@ class MoleculeParser(object):
                     if len(ck) == 2 and rgobjk.smiles.count("=") > 2:
                         cbs.append(ck)
                 if (len(cbs) > 0 and db == 2) or (len(cbs) > 1 and db == 1):
-                    rgobj = rgobj._replace(label="b")
+                    label = "b"
                 elif db == 2:
                     # candidate benzene ring
-                    rgobj = rgobj._replace(label="bx")
+                    label = "bx"
 
             # other types of aromatic rings
-            if rgobj.label is None or rgobj.label == "bx":
+            if label is None or label == "bx":
                 c2o = []
                 for j in rgix:
                     for nei in self.atoms[j].neighbors:
@@ -202,47 +201,45 @@ class MoleculeParser(object):
                 if db >= 1:
                     if db == 2 and len(c2o) == 2:
                         # quinone
-                        if nc == 6:
-                            rgobj = rgobj._replace(label="q")
-                            rgobj = rgobj._replace(supports=tuple(c2o))
+                        if n == 6:
+                            label, supports = "q", tuple(c2o)
                     elif db == 2 and c2o:
                         # methyldeoxybenzoin if 6 membered ring
                         # else chalcone cyclopentenedione
-                        rgobj = rgobj._replace(label="m" if nc == 6 else "cc")
-                        rgobj = rgobj._replace(supports=c2o[0])
+                        label, supports = "m" if n == 6 else "cc", c2o[0]
                     elif db == 1 and len(c2o) == 2:
-                        rgobj = rgobj._replace(label="q2" if nc == 6 else "cc")
-                        rgobj = rgobj._replace(supports=tuple(c2o))
+                        label, supports ="q2" if n == 6 else "cc", tuple(c2o)
                 else:
                     if len(c2o) == 3 and not set(c2o) & rgobj.index:
                         # cyclohexane-1,3,5-trione
-                        rgobj = rgobj._replace(label="c")
-                        rgobj = rgobj._replace(supports=tuple(c2o))
+                        label, supports ="c", tuple(c2o)
 
-            self.benzylrings[rgix] = rgobj
+            if label is not None:
+                rgobj = rgobj._replace(label=label)
+                rgobj = rgobj._replace(supports=supports)
+
+                self.benzylrings[rgix] = rgobj
 
         # recheck those unidentified or candidate benzene rings
-        while True:
+        while 1:
             t = True
             for rgix, rgobj in self.benzylrings.items():
                 if rgobj.label is None or rgobj.label == "bx":
-                    if rgobj.smiles.lower().count("c") != len(rgix):
-                        continue
-                    nn = 0
+                    _n_adj, label = 0, rgobj.label
                     for rgixk, rgobjk in self.benzylrings.items():
                         ck = rgobj.index & rgobjk.index
                         if len(ck) == 2 and rgobjk.label == "b":
-                            nn += 1
-                    if rgobj.label == 'bx' and nn > 0:
-                        rgobj = rgobj._replace(label="b")
-                        t = False
-                    elif rgobj.label is None and nn == 3:
-                        rgobj = rgobj._replace(label="b")
-                        t = False
+                            _n_adj += 1
+                    if rgobj.label == 'bx' and _n_adj > 0:
+                        label, t ="b", False
+                    elif rgobj.label is None and _n_adj == 3:
+                        label, t = "b", False
 
-                    if rgobj.label == "bx":
-                        rgobj = rgobj._replace(label=None)
-                self.benzylrings[rgix] = rgobj
+                    if label == "bx":
+                        label = None
+
+                    rgobj = rgobj._replace(label=label)
+                    self.benzylrings[rgix] = rgobj
             if t:
                 break
 
@@ -266,13 +263,10 @@ class MoleculeParser(object):
                       if nei.index not in rgix and nei.symbol == "c"]
                 if not cc:
                     continue
-                for nei in self.atoms[j].neighbors:
+                for k in self.atoms[j].neiset&rgobj.index:
                     # C(9)-O(1)
-                    k = nei.index
-                    if k not in rgix:
-                        continue
                     bo = [nei.index for nei in self.atoms[k].neighbors
-                          if nei.symbol == "o" and nei.index not in rgix]
+                          if nei.symbol == "o"]
                     if not bo:
                         continue
                     rgobj = rgobj._replace(isringAC=True)
